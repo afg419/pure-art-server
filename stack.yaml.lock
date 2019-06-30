@@ -6,35 +6,21 @@
 packages:
 - completed:
     cabal-file:
-      size: 2477
-      sha256: ce34d878033c866a1c9ce19ed49c837baff4e4e25b596e51eb0999307d8e915c
+      size: 2505
+      sha256: 90fa03cd0fa90ae87aaef73f3f4d0ce5261b895287e8856798a0dbc6f526e5d5
     name: hd-tree-secp256k1
     version: 0.0.0
-    git: git@github.com:CaptJakk/hd-tree-secp256k1.git
+    git: git@github.com:afg419/hd-tree-secp256k1.git
     pantry-tree:
       size: 932
-      sha256: 163e51f0c562dd448cfe6a2a1ae733f954707e8e229036d54e92b990481caaee
-    commit: c6fc333c97cda2bb0cea275ced3e0dd90bfad82c
+      sha256: 21693fa07e66d59e21bedf9164a9da27c4fd8c3b84cdf613e40ab0dce1818395
+    commit: 17151b2c081c59ce9b68b89419781cd82f3684aa
   original:
-    git: git@github.com:CaptJakk/hd-tree-secp256k1.git
-    commit: c6fc333c97cda2bb0cea275ced3e0dd90bfad82c
-- completed:
-    hackage: base58-bytestring-0.1.0@sha256:a1da72ee89d5450bac1c792d9fcbe95ed7154ab7246f2172b57bd4fd9b5eab79,1913
-    pantry-tree:
-      size: 419
-      sha256: 053784f8edef6433518c873a7c502dc75348f812e2384e1306f90467ea54f40b
-  original:
-    hackage: base58-bytestring-0.1.0
-- completed:
-    hackage: secp256k1-1.1.2@sha256:dab011a3c6adfe0771f77cd0d406f3c4427f5169d53769a92babc5721b329117,1919
-    pantry-tree:
-      size: 593
-      sha256: cd2921868cfea0f27c93a05791008f49038a9243e1d508eb7fcb50b7f13c6c6a
-  original:
-    hackage: secp256k1-1.1.2
+    git: git@github.com:afg419/hd-tree-secp256k1.git
+    commit: 17151b2c081c59ce9b68b89419781cd82f3684aa
 snapshots:
 - completed:
-    size: 507599
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/11/11.yaml
-    sha256: 5ec0a1ff4dadde524eb529784556bcc32014422fd1e1ed91231c59f001e92ca9
-  original: lts-11.11
+    size: 499889
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/26.yaml
+    sha256: ecb02ee16829df8d7219e7d7fe6c310819820bf335b0b9534bce84d3ea896684
+  original: lts-13.26

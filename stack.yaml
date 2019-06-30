@@ -35,8 +35,9 @@ packages:
 # forks / in-progress versions pinned to a git hash. For example:
 #
 extra-deps:
-  - git: git@github.com:CaptJakk/hd-tree-secp256k1.git
-    commit: 44d489daec894081e18a566da85783788dfe20d9
+  - git: git@github.com:afg419/hd-tree-secp256k1.git
+    commit: 17151b2c081c59ce9b68b89419781cd82f3684aa
+  
 # extra-deps: []
 
 # Override default flag values for local packages and extra-deps

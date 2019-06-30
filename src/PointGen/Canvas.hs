@@ -1,13 +1,12 @@
-{-# LANGUAGE EmptyCase            #-}
-{-# LANGUAGE TypeSynonymInstances            #-}
-{-# LANGUAGE FlexibleInstances            #-}
+{-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeOperators #-}
 
 module PointGen.Canvas where
 
 import Import hiding (Proxy)
-import GHC.TypeLits
 import Data.Proxy
 
 fibrePlaneSize :: Integer
