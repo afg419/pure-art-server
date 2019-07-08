@@ -7,7 +7,6 @@ dependencies:
 - yesod
 - yesod-core
 - yesod-auth
-- yesod-static
 - yesod-form
 - classy-prelude
 - classy-prelude-conduit
@@ -47,6 +46,7 @@ dependencies:
 - hd-tree-secp256k1
 - cereal
 - cryptonite
+- base16-bytestring
 
 # The library contains all of our application code. The executable
 # defined below is just a thin wrapper.

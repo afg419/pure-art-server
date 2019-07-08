@@ -11,10 +11,13 @@ module Model where
 
 import ClassyPrelude.Yesod
 import Database.Persist.Quasi
+import PointGen.Address
+import PointGen.Bip32
+import Import
 
--- You can define all of your database entities in the entities file.
--- You can find more information on persistent and how to declare entities
--- at:
--- http://www.yesodweb.com/book/persistent/
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
     $(persistFileWith lowerCaseSettings "config/models.persistentmodels")
+
+newtype SCanvas2 (m :: Nat) (n :: Nat) (a :: Asset) = SCanvas2 Canvas2
+newtype SCanvas2Id (m :: Nat) (n :: Nat) (a :: Asset) = SCanvas2Id Canvas2Id
+newtype SXPubId = SXPubId XPubRecordId deriving Show
