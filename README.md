@@ -8,7 +8,7 @@ createuser pure-art-server --pwprompt --superuser
 createdb pure-art-server
 createdb pure-art-server_test
 ```
-
+whatttt
 ## Haskell Setup
 
 1. If you haven't already, [install Stack](https://haskell-lang.org/get-started)
