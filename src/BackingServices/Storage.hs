@@ -11,10 +11,8 @@ import PointGen.Plane
 import PointGen.Coordinate
 import PointGen.AddressTransform
 import Model
-import BackingServices.Common
 import Import
-
-newtype Eff s = Eff { ex :: forall a. s a -> Handler a}
+import Effects
 
 class (Effect s, MonadIO s) => Registration s where
   insertXPub :: XPub -> s SXPubId

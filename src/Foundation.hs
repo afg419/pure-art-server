@@ -106,8 +106,6 @@ instance YesodPersist App where
         master <- getYesod
         runSqlPool action $ appConnPool master
 
-
-
 instance YesodPersistRunner App where
     getDBRunner :: Handler (DBRunner App, Handler ())
     getDBRunner = defaultGetDBRunner appConnPool
