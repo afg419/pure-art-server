@@ -1,17 +1,20 @@
+{-# LANGUAGE LiberalTypeSynonyms #-}
+
 module Handler.Registration where
 
 import Import
-import BackingServices.Storage
+import Effects.Registration
 import Model
-import PointGen.Bip32
-import Effects
+import PointGen
+import Effects.Common
+import Effects.Interpreters
 
 postRegisterXPubR :: Handler Text
 postRegisterXPubR = do
   xpub <- requireCheckJsonBody
-  fmap tshow <<< runEffects (Eff $ run @PsqlDB) $ registerXPubLogic xpub
+  fmap tshow <<< runEffects (run @PsqlDB) $ registerXPubLogic xpub
 
-registerXPubLogic :: Registration r => XPub -> Effectful (Eff r) SXPubId
+registerXPubLogic :: Registration r => XPub -> Effectful (Interpreter r) SXPubId
 registerXPubLogic xpub = do
-  runR <- ask
-  pure <<< ex runR $ insertXPub xpub
+  i <- interpret <$> ask
+  pure <<< i $ insertXPub xpub

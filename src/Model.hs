@@ -7,12 +7,13 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE DeriveGeneric               #-}
+
 module Model where
 
 import ClassyPrelude.Yesod
 import Database.Persist.Quasi
-import PointGen.Address
-import PointGen.Bip32
+import PointGen
 import Import
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
@@ -20,4 +21,13 @@ share [mkPersist sqlSettings, mkMigrate "migrateAll"]
 
 newtype SCanvas2 (m :: Nat) (n :: Nat) (a :: Asset) = SCanvas2 Canvas2
 newtype SCanvas2Id (m :: Nat) (n :: Nat) (a :: Asset) = SCanvas2Id Canvas2Id
-newtype SXPubId = SXPubId XPubRecordId deriving Show
+instance Show (SCanvas2Id m n a) where
+  show (SCanvas2Id s) = show s
+
+data SomeCanvasId where
+  CanvasIdExists :: SCanvas2Id m n a -> SomeCanvasId
+instance Show SomeCanvasId where
+  show (CanvasIdExists s) = show s
+
+newtype SXPubId = SXPubId XPubRecordId deriving (Show, Eq, Generic)
+instance FromJSON SXPubId

@@ -8,6 +8,7 @@ import Control.Category      as Import
 import GHC.Read as Import
 import GHC.Generics as Import
 import GHC.TypeLits as Import
+import GHC.Natural as Import
 import GHC.Word as Import
 
 preimage :: Eq b => (a -> b) -> b -> [a] -> [a]
