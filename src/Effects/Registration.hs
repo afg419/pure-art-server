@@ -13,6 +13,7 @@ import Effects.Interpreters
 
 class (Effect s, MonadIO s) => Registration s where
   insertXPub :: XPub -> s SXPubId
+  -- getXPub :: SXpubId -> XPub
 
 instance Registration PsqlDB where
   insertXPub xpub = do

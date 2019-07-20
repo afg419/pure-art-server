@@ -8,4 +8,4 @@ import Effects.Common
 newtype PsqlDB a = PsqlDB { runPsql :: SqlPersistT Handler a } deriving (Functor, Applicative, Monad, MonadIO)
 
 instance Effect PsqlDB where
-  run = Interpreter $ runDB <<< runPsql
+  run = Interpreter $ lift <<< runDB <<< runPsql

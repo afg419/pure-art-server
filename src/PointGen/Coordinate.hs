@@ -9,16 +9,16 @@ import Import
 
 type KnownNats m n = (KnownNat m, KnownNat n)
 
-data Coordinate (m :: Nat) (n :: Nat) where
-  Coordinate :: forall m n. KnownNats m n =>
-    { x :: Integer, y :: Integer, plane :: Plane2 m n } -> Coordinate m n
+data Coordinate2 (m :: Nat) (n :: Nat) where
+  Coordinate2 :: forall m n. KnownNats m n =>
+    { x :: Integer, y :: Integer, plane :: Plane2 m n } -> Coordinate2 m n
 
-deriving instance Show (Coordinate m n)
-deriving instance Eq (Coordinate m n)
+deriving instance Show (Coordinate2 m n)
+deriving instance Eq (Coordinate2 m n)
 
-mkCoordinate :: forall m n. (KnownNat m, KnownNat n) => Integer -> Integer -> Plane2 m n -> Maybe (Coordinate m n)
+mkCoordinate :: forall m n. (KnownNat m, KnownNat n) => Integer -> Integer -> Plane2 m n -> Maybe (Coordinate2 m n)
 mkCoordinate x' y' c = if xValid && yValid
-  then Just $ Coordinate x' y' c
+  then Just $ Coordinate2 x' y' c
   else Nothing
   where
     (xSize, ySize) = plane2Dim c
@@ -26,8 +26,8 @@ mkCoordinate x' y' c = if xValid && yValid
     yValid = 0 <= y' && y' <= ySize - 1
 
 scaleToNewPlane :: (KnownNats m1 n1, KnownNats m2 n2)
-  => Plane2 m2 n2 -> Coordinate m1 n1 -> Coordinate m2 n2
-scaleToNewPlane cNew (Coordinate x' y' cOld) =
+  => Plane2 m2 n2 -> Coordinate2 m1 n1 -> Coordinate2 m2 n2
+scaleToNewPlane cNew (Coordinate2 x' y' cOld) =
   fromJust $ mkCoordinate xScaled yScaled cNew
   where
     (xNew, yNew) = plane2Dim cNew
@@ -36,18 +36,18 @@ scaleToNewPlane cNew (Coordinate x' y' cOld) =
     yScaled = (y' * yNew) `div` yOld
 
 data SubPlane2 (m :: Nat) (n :: Nat)  where
-  SubPlane2 :: Coordinate m n -> Coordinate m n -> SubPlane2 m n
+  SubPlane2 :: Coordinate2 m n -> Coordinate2 m n -> SubPlane2 m n
 
 getYRange :: SubPlane2 m n -> Range Integer
-getYRange (SubPlane2 (Coordinate _ y1 _) (Coordinate _ y2 _)) = mkRange y1 y2
+getYRange (SubPlane2 (Coordinate2 _ y1 _) (Coordinate2 _ y2 _)) = mkRange y1 y2
 
 getXRange :: SubPlane2 m n -> Range Integer
-getXRange (SubPlane2 (Coordinate x1 _ _) (Coordinate x2 _ _)) = mkRange x1 x2
+getXRange (SubPlane2 (Coordinate2 x1 _ _) (Coordinate2 x2 _ _)) = mkRange x1 x2
 
 preimageInPlane :: (KnownNat m1, KnownNat n1, KnownNat m2, KnownNat n2) =>
-  Plane2 m1 n1 -> Coordinate m2 n2 -> SubPlane2 m1 n1
-preimageInPlane prePlane (Coordinate x' y' targetPlane) =
-  SubPlane2 (Coordinate botX botY prePlane) (Coordinate topX topY prePlane)
+  Plane2 m1 n1 -> Coordinate2 m2 n2 -> SubPlane2 m1 n1
+preimageInPlane prePlane (Coordinate2 x' y' targetPlane) =
+  SubPlane2 (Coordinate2 botX botY prePlane) (Coordinate2 topX topY prePlane)
   where
     (prePlaneX, prePlaneY) = plane2Dim prePlane
     (targetPlaneX, targetPlaneY) = plane2Dim targetPlane

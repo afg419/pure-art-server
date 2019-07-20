@@ -15,6 +15,4 @@ postRegisterXPubR = do
   fmap tshow <<< runEffects (run @PsqlDB) $ registerXPubLogic xpub
 
 registerXPubLogic :: Registration r => XPub -> Effectful (Interpreter r) SXPubId
-registerXPubLogic xpub = do
-  i <- interpret <$> ask
-  pure <<< i $ insertXPub xpub
+registerXPubLogic xpub = (interpret <$> ask) >>= (<<$ insertXPub xpub)

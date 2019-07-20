@@ -14,11 +14,14 @@ Canvas2
   xSize Int64
   ySize Int64
   originAddress Text
+  nextPathIndex Int64
   createdAt UTCTime
   updatedAt UTCTime
 
 LocaleRecord
   canvas2Id Canvas2Id
+  x Int64
+  y Int64
   path DerivationPath
   address Text
   createdAt UTCTime

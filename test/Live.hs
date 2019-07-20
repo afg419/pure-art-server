@@ -23,8 +23,8 @@ planeLarge = P2
 planeXLarge :: Plane2 5000 6000
 planeXLarge = P2
 
-coordinateT :: KnownNats m n => Plane2 m n -> Coordinate m n
-coordinateT p2 = Coordinate { x = 0, y = 0, plane = p2 }
+coordinateT :: KnownNats m n => Plane2 m n -> Coordinate2 m n
+coordinateT p2 = Coordinate2 { x = 0, y = 0, plane = p2 }
 
 testT :: KnownNats m n => Plane2 m n -> Maybe (Locale m n 'DOGE)
 testT p2 = coordinateHunt SDOGE xpubT (coordinateT p2)

@@ -28,3 +28,11 @@ mToE e = maybe (Left e) Right
 
 eToM :: Either e a -> Maybe a
 eToM = either (const Nothing) Just
+
+($>>) :: a -> (a -> b) -> b
+($>>) = flip ($)
+infixl 9 $>>
+
+(<<$) :: (a -> b) -> a -> b
+(<<$) = ($)
+infixl 9 <<$

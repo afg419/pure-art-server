@@ -35,6 +35,6 @@ postInitCanvasGenerationR = do -- pure $ InitCanvasGenerationRes "" ""
 initCanvasGenerationLogic :: CanvasGeneration r => InitCanvasGenerationReq -> Effectful (Interpreter r) (Either String (SomeCanvasId, SomeAddress))
 initCanvasGenerationLogic InitCanvasGenerationReq{..} = do
   i <- interpret <$> ask
-  pure <<< i $ withSomeSing asset $ \sAsset ->
+  i $ withSomeSing asset $ \sAsset ->
         withPlaneStock planeStock $ \plane ->
           fmap (CanvasIdExists *** AddressExists) <$> insertCanvas2 sAsset xpubId plane
