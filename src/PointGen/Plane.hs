@@ -20,8 +20,15 @@ deriving instance Eq (Plane2 m n)
 plane2Dim :: forall m n. (KnownNat m, KnownNat n) => Plane2 m n -> (Integer, Integer)
 plane2Dim _ = (fromIntegral <<< natVal $ Proxy @m , fromIntegral <<< natVal $ Proxy @n)
 
+leqDimensionsThan :: (KnownNat m1, KnownNat n1, KnownNat m2, KnownNat n2)
+  => Plane2 m1 n1 -> Plane2 m2 n2 -> Bool
+leqDimensionsThan p1 p2 = p1x <= p2x && p1y <= p2y
+  where
+    (p1x, p1y) = plane2Dim p1
+    (p2x, p2y) = plane2Dim p2
+
 data PlaneStock = SmallStock | MediumStock | LargeStock | XLargeStock
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Generic, Bounded, Enum)
 instance FromJSON PlaneStock
 
 smallPlane :: Plane2 10 10

@@ -12,12 +12,19 @@ import PointGen.Plane
 import qualified Crypto.HDTree.Bip32 as Crypto
 import qualified Data.ByteArray                as BA
 import Data.Maybe
-import Import hiding (id)
+import Import hiding (id, Proxy)
+import Data.Proxy
 
 type MaxHashSize = 2^256
 type FibrePlane = Plane2 MaxHashSize MaxHashSize
 type FibreCoordinate = Coordinate2 MaxHashSize MaxHashSize
 type FibreLocale a = Locale MaxHashSize MaxHashSize a
+
+maxHashSize :: Integer
+maxHashSize = fromIntegral <<< natVal $ Proxy @MaxHashSize
+
+fibrePlane :: FibrePlane
+fibrePlane = P2
 
 addressTransform :: Address a -> FibreCoordinate
 addressTransform = textProject <<< pack <<< show
@@ -42,7 +49,7 @@ data Locale (m :: Nat) (n :: Nat) (a :: Asset) = Locale { lCoordinate :: Coordin
 scaleLocale :: (KnownNats m1 n1, KnownNats m2 n2) => Plane2 m2 n2 -> Locale m1 n1 a -> Locale m2 n2 a
 scaleLocale p2 locale = locale{ lCoordinate = scaledCoordinate }
   where
-    scaledCoordinate = scaleToNewPlane p2 $ lCoordinate locale
+    scaledCoordinate = projectTo p2 $ lCoordinate locale
 
 deriveFibreLocale :: SAsset a -> XPub -> DerivationPath -> Maybe (FibreLocale a)
 deriveFibreLocale sAsset xpub dpath = do
@@ -57,6 +64,8 @@ maxTries :: (KnownNat m, KnownNat n) => Plane2 m n -> Integer
 maxTries p2 = 100 * xDim * yDim
   where
     (xDim, yDim) = plane2Dim p2
+
+-- fibreOver :: Coordinate2 m n -> (FibreCoordinate, FibreCoordinate)
 
 coordinateHunt :: KnownNats m n => SAsset a -> XPub -> Coordinate2 m n -> Maybe (Locale m n a)
 coordinateHunt asset xpub target = find isTarget derivations

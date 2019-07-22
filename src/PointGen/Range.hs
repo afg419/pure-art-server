@@ -8,5 +8,5 @@ mkRange r1 r2 = Range (min r1 r2) (max r1 r2)
 diameter :: Num a => Range a -> a
 diameter (Range bot top) = top - bot
 
-inRange :: Ord a => Range a -> a -> Bool
-inRange (Range bot top) a = bot <= a && a <= top
+inRange :: Ord a => a -> Range a -> Bool
+inRange  a (Range bot top) = bot <= a && a <= top

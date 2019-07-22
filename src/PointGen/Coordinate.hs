@@ -25,9 +25,9 @@ mkCoordinate x' y' c = if xValid && yValid
     xValid = 0 <= x' && x' <= xSize - 1
     yValid = 0 <= y' && y' <= ySize - 1
 
-scaleToNewPlane :: (KnownNats m1 n1, KnownNats m2 n2)
+projectTo :: (KnownNats m1 n1, KnownNats m2 n2)
   => Plane2 m2 n2 -> Coordinate2 m1 n1 -> Coordinate2 m2 n2
-scaleToNewPlane cNew (Coordinate2 x' y' cOld) =
+projectTo cNew (Coordinate2 x' y' cOld) =
   fromJust $ mkCoordinate xScaled yScaled cNew
   where
     (xNew, yNew) = plane2Dim cNew
@@ -44,9 +44,16 @@ getYRange (SubPlane2 (Coordinate2 _ y1 _) (Coordinate2 _ y2 _)) = mkRange y1 y2
 getXRange :: SubPlane2 m n -> Range Integer
 getXRange (SubPlane2 (Coordinate2 x1 _ _) (Coordinate2 x2 _ _)) = mkRange x1 x2
 
-preimageInPlane :: (KnownNat m1, KnownNat n1, KnownNat m2, KnownNat n2) =>
+inSubPlane :: Coordinate2 m n -> SubPlane2 m n -> Bool
+inSubPlane c sp = (x c) `inRange` xRange && (y c) `inRange` yRange
+  where
+    xRange = getXRange sp
+    yRange = getYRange sp
+
+
+fibreOver :: (KnownNat m1, KnownNat n1, KnownNat m2, KnownNat n2) =>
   Plane2 m1 n1 -> Coordinate2 m2 n2 -> SubPlane2 m1 n1
-preimageInPlane prePlane (Coordinate2 x' y' targetPlane) =
+fibreOver prePlane (Coordinate2 x' y' targetPlane) =
   SubPlane2 (Coordinate2 botX botY prePlane) (Coordinate2 topX topY prePlane)
   where
     (prePlaneX, prePlaneY) = plane2Dim prePlane
