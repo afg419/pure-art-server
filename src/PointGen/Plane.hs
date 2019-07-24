@@ -31,13 +31,16 @@ data PlaneStock = SmallStock | MediumStock | LargeStock | XLargeStock
   deriving (Eq, Show, Generic, Bounded, Enum)
 instance FromJSON PlaneStock
 
+stockLeqThan :: (KnownNat m, KnownNat n) => PlaneStock -> Plane2 m n -> Bool
+stockLeqThan ps targetPlane = withPlaneStock ps ( \stockPlane -> stockPlane `leqDimensionsThan` targetPlane )
+
 smallPlane :: Plane2 10 10
 smallPlane = P2
-mediumPlane :: Plane2 10 10
+mediumPlane :: Plane2 100 100
 mediumPlane = P2
-largePlane :: Plane2 10 10
+largePlane :: Plane2 1000 1000
 largePlane = P2
-xLargePlane :: Plane2 10 10
+xLargePlane :: Plane2 10000 10000
 xLargePlane = P2
 
 withPlaneStock :: PlaneStock -> ( forall m n. (KnownNat m, KnownNat n) => Plane2 m n -> s ) -> s

@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module PointGen.Coordinate where
 
@@ -13,7 +14,12 @@ data Coordinate2 (m :: Nat) (n :: Nat) where
   Coordinate2 :: forall m n. KnownNats m n =>
     { x :: Integer, y :: Integer, plane :: Plane2 m n } -> Coordinate2 m n
 
-deriving instance Show (Coordinate2 m n)
+instance Show (Coordinate2 m n) where
+  show Coordinate2{..} = pack $ "(x:" <> show x <> " y:"<> show y <> " plane:" <> show xDim <> "," <> show yDim <> ")"
+    where
+      (xDim, yDim) = plane2Dim plane
+
+
 deriving instance Eq (Coordinate2 m n)
 
 mkCoordinate :: forall m n. (KnownNat m, KnownNat n) => Integer -> Integer -> Plane2 m n -> Maybe (Coordinate2 m n)
@@ -37,6 +43,16 @@ projectTo cNew (Coordinate2 x' y' cOld) =
 
 data SubPlane2 (m :: Nat) (n :: Nat)  where
   SubPlane2 :: Coordinate2 m n -> Coordinate2 m n -> SubPlane2 m n
+deriving instance (Eq (SubPlane2 m n))
+deriving instance (Show (SubPlane2 m n))
+
+-- subplane length + width
+subplane2Dim :: SubPlane2 m n -> (Integer, Integer)
+subplane2Dim = (diameter <<< getXRange) &&& (diameter <<< getXRange)
+
+-- subplane is translated from origin by this amount
+subplane2Translate :: SubPlane2 m n -> (Integer, Integer)
+subplane2Translate = (low <<< getXRange) &&& (low <<< getYRange)
 
 getYRange :: SubPlane2 m n -> Range Integer
 getYRange (SubPlane2 (Coordinate2 _ y1 _) (Coordinate2 _ y2 _)) = mkRange y1 y2
@@ -51,20 +67,25 @@ inSubPlane c sp = (x c) `inRange` xRange && (y c) `inRange` yRange
     yRange = getYRange sp
 
 
+
+
 fibreOver :: (KnownNat m1, KnownNat n1, KnownNat m2, KnownNat n2) =>
   Plane2 m1 n1 -> Coordinate2 m2 n2 -> SubPlane2 m1 n1
-fibreOver prePlane (Coordinate2 x' y' targetPlane) =
-  SubPlane2 (Coordinate2 botX botY prePlane) (Coordinate2 topX topY prePlane)
+fibreOver plane_up (Coordinate2 x' y' plane_down) =
+  SubPlane2 (Coordinate2 botX botY plane_up) (Coordinate2 topX topY plane_up)
   where
-    (prePlaneX, prePlaneY) = plane2Dim prePlane
-    (targetPlaneX, targetPlaneY) = plane2Dim targetPlane
+    (plane_up_X, plane_up_Y) = plane2Dim plane_up
+    (plane_down_X, plane_down_Y) = plane2Dim plane_down
 
-    botX = scaleToNewSegment targetPlaneX prePlaneX x'
-    botY = scaleToNewSegment targetPlaneY prePlaneY y'
+    botX = scaleToNewSegment plane_down_X plane_up_X x'
+    botY = scaleToNewSegment plane_down_Y plane_up_Y y'
 
-    topX = min (1 + botX) prePlaneX
-    topY = min (1 + botY) prePlaneY
+    topX' = scaleToNewSegment plane_down_X plane_up_X (x' + 1)
+    topY' = scaleToNewSegment plane_down_Y plane_up_Y (y' + 1)
+
+    topX = min (topX' - 1) (plane_up_X - 1)
+    topY = min (topY' - 1) (plane_up_Y - 1)
 
 scaleToNewSegment :: Integer -> Integer -> Integer -> Integer
 scaleToNewSegment initialCount finalCount initialPoint =
-  initialPoint * finalCount `div` initialCount
+  (initialPoint * finalCount) `div` initialCount

@@ -36,3 +36,8 @@ infixl 9 $>>
 (<<$) :: (a -> b) -> a -> b
 (<<$) = ($)
 infixl 9 <<$
+
+bToM :: (a -> Bool) -> a -> Maybe a
+bToM test a = if test a
+  then Just a
+  else Nothing

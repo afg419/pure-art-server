@@ -48,6 +48,8 @@ dependencies:
 - cryptonite
 - base16-bytestring
 - QuickCheck
+- basement
+- quickcheck-assertions
 
 # The library contains all of our application code. The executable
 # defined below is just a thin wrapper.
