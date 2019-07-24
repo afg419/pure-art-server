@@ -8,9 +8,19 @@ import Effects.CanvasGeneration
 import Effects.Common
 import Data.Either
 import Data.Singletons
-import Import hiding (undefined, length)
+import Import hiding (undefined, length, sum)
 
 data GenerateCanvasRes = GenerateCanvasRes { foundCoordinates :: Integer, totalCoordinates :: Integer }
+
+
+-- On average for a fair n-sided dice it takes n * sum_k=1^n 1/k
+estimateAttemptsNeeded :: (KnownNats m n , Ord a, Floating a) => Plane2 m n -> Range a
+estimateAttemptsNeeded p = mkRange (diceSides * lowBoundSum) (diceSides * highBoundSum)
+  where
+    (m,n) = plane2Dim p
+    diceSides = realToFrac $ m * n
+    lowBoundSum = log (diceSides + 1)
+    highBoundSum = 1 + log(diceSides)
 
 generateCanvasLogic :: forall r m n a. (CanvasGeneration r, KnownNats m n, SingI a) => XPub -> SCanvas2Id m n a -> Integer -> Effectful (Interpreter r) (Either String GenerateCanvasRes)
 generateCanvasLogic xpub scid totalTries = do
