@@ -1,15 +1,8 @@
 -- By default this file is used by `persistFileWith` in Model.hs (which is imported by Foundation.hs)
 -- Syntax for this file here: https://github.com/yesodweb/persistent/blob/master/docs/Persistent-entity-syntax.md
 
-XPubRecord
-  xpub XPub
-  createdAt UTCTime
-  updatedAt UTCTime
-  UniqueXPub xpub
-  deriving Typeable
-
 Canvas2
-  xpubId XPubRecordId
+  xpub XPub
   asset Asset
   xSize Int64
   ySize Int64
@@ -26,3 +19,4 @@ LocaleRecord
   address Text
   createdAt UTCTime
   updatedAt UTCTime
+  Primary canvas2Id x y

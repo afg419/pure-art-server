@@ -7,6 +7,8 @@ import PointGen
 import Import hiding (print)
 import Data.Maybe
 
+
+
 prop_projectTo :: IO ()
 prop_projectTo = quickCheck $ do
   withRandomPlane (const True) $ \plane_up -> do
@@ -36,7 +38,7 @@ prop_fibreOver = quickCheck $ do
   coord_down <- genCoordinate p_down
   let fibre = fibreOver p_up coord_down
 
-  pure $ (diameter <<< getXRange $ fibre) === 10 -- && (diameter <<< getYRange $ fibre) == 10
+  pure $ (diameter <<< xRange $ fibre) === 10 -- && (diameter <<< yRange $ fibre) == 10
 
 prop_projectToTrip :: IO ()
 prop_projectToTrip = quickCheck $ do
@@ -67,11 +69,11 @@ prop_primageEquallyDistributed = quickCheck $ do
     let fibre1 = p_up `fibreOver` coord_down_1
     let fibre2 = p_up `fibreOver` coord_down_2
 
-    let xWidth1 = getXRange fibre1
-    let xWidth2 = getXRange fibre2
+    let xWidth1 = xRange fibre1
+    let xWidth2 = xRange fibre2
 
-    let yWidth1 = getYRange fibre1
-    let yWidth2 = getYRange fibre2
+    let yWidth1 = yRange fibre1
+    let yWidth2 = yRange fibre2
 
     xOrY <- arbitrary
     pure $ if xOrY

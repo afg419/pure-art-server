@@ -3,12 +3,14 @@
 module Gen.PointGen where
 
 import Test.QuickCheck
-import Test.QuickCheck.Assertions (Result, binAsrt)
 import PointGen
 import Import hiding (undefined)
 import qualified Basement.Types.Word256 as B
 import qualified Basement.Numerical.Number as B
 import Data.Maybe
+
+stockLeqThan :: (KnownNat m, KnownNat n) => PlaneStock -> Plane2 m n -> Bool
+stockLeqThan ps targetPlane = withPlaneStock ps (`leqDimensionsThan` targetPlane)
 
 instance Arbitrary PlaneStock where
   arbitrary = arbitraryBoundedEnum

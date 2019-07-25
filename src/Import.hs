@@ -31,11 +31,11 @@ eToM = either (const Nothing) Just
 
 ($>>) :: a -> (a -> b) -> b
 ($>>) = flip ($)
-infixl 9 $>>
+infixl 0 $>>
 
 (<<$) :: (a -> b) -> a -> b
 (<<$) = ($)
-infixl 9 <<$
+infixl 0 <<$
 
 bToM :: (a -> Bool) -> a -> Maybe a
 bToM test a = if test a

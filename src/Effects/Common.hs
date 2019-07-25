@@ -15,3 +15,6 @@ type Effectful interpreters = ReaderT interpreters Handler
 
 runEffects :: interpreters -> Effectful interpreters a -> Handler a
 runEffects e eff = flip runReaderT e $ eff
+
+liftEffectful :: Effect s => s a -> Effectful (Interpreter s) a
+liftEffectful = interpret $ run

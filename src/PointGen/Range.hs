@@ -1,5 +1,6 @@
 module PointGen.Range where
 
+-- ranges represent _closed_ intervals
 data Range a = Range a a
 
 instance Show a => Show (Range a) where

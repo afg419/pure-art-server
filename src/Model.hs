@@ -7,7 +7,9 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE DeriveGeneric               #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Model where
 
@@ -15,6 +17,7 @@ import ClassyPrelude.Yesod
 import Database.Persist.Quasi
 import PointGen
 import Import
+import Data.Maybe
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
     $(persistFileWith lowerCaseSettings "config/models.persistentmodels")
@@ -34,7 +37,24 @@ data SomeCanvasId where
 instance Show SomeCanvasId where
   show (CanvasIdExists s) = show s
 
-newtype SXPubId = SXPubId XPubRecordId deriving (Show, Eq, Generic)
-instance FromJSON SXPubId
-
 newtype SLocaleId (m :: Nat) (n :: Nat) (a :: Asset) = SLocaleId LocaleRecordId
+
+toLocaleRecord :: SCanvas2Id m n a -> UTCTime -> Locale m n a -> LocaleRecord
+toLocaleRecord (SCanvas2Id canvasId) now (Locale {..}) = LocaleRecord canvasId rX rY lPath (tshow lAddress) now now
+  where
+    rX = fromIntegral $ x lCoordinate
+    rY = fromIntegral $ y lCoordinate
+
+toLocaleRecordKey :: SCanvas2Id m n a -> Locale m n a -> Key LocaleRecord
+toLocaleRecordKey (SCanvas2Id canvasId) (Locale {..}) = LocaleRecordKey canvasId rX rY
+  where
+    rX = fromIntegral $ x lCoordinate
+    rY = fromIntegral $ y lCoordinate
+-- data Locale (m :: Nat) (n :: Nat) (a :: Asset) = Locale { lCoordinate :: Coordinate2 m n, lAddress :: Address a, lPath :: DerivationPath } deriving Show
+fromLocaleRecord :: KnownNats m n => SAsset a -> SCanvas2Id m n a -> LocaleRecord -> Locale m n a
+fromLocaleRecord sAsset _ LocaleRecord{..} = Locale coordinate address localeRecordPath
+  where
+    coordinate = Coordinate2 (fromIntegral localeRecordX) (fromIntegral localeRecordY) P2
+    address = fromJust <<< mkAddress sAsset $ localeRecordAddress
+
+-- data Locale (m :: Nat) (n :: Nat) (a :: Asset) = Locale { lCoordinate :: Coordinate2 m n, lAddress :: Address a, lPath :: DerivationPath } deriving Show
