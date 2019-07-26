@@ -17,13 +17,13 @@ originAddressPath = mkPath [0,0]
 
 class Effect s => CanvasGeneration s where
   -- returns id of record, and 0/0 address
-  insertCanvas2 :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> s (Either String (SCanvas2Id m n a, Address a))
-  getCanvas2    :: (SingI a, KnownNats m n) => SCanvas2Id m n a -> s (Maybe (SCanvas2 m n a, SAsset a))
-  updateCanvas2NextPathIndex :: SCanvas2Id m n a -> Integer -> s ()
+  insertCanvas2 :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> s (Either String (SCanvas2Id a m n, Address a))
+  getCanvas2    :: (SingI a, KnownNats m n) => SCanvas2Id a m n -> s (Maybe (SCanvas2 a m n, SAsset a))
+  updateCanvas2NextPathIndex :: SCanvas2Id a m n -> Integer -> s ()
 
   -- this uses a repsertMany so no duplicate coordinates stored
-  insertPlane2Locales :: KnownNats m n => SCanvas2Id m n a -> [Locale m n a] -> s ()
-  getPlane2Locales :: (SingI a, KnownNats m n) => SCanvas2Id m n a -> s [Locale m n a]
+  insertPlane2Locales :: KnownNats m n => SCanvas2Id a m n -> [Locale a m n] -> s ()
+  getPlane2Locales :: (SingI a, KnownNats m n) => SCanvas2Id a m n -> s [Locale a m n]
 
 instance CanvasGeneration PsqlDB where
   insertCanvas2 sAsset xpub p2 = do

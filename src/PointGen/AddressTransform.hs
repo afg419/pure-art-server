@@ -56,16 +56,16 @@ word8sToInteger (a:as) = fromIntegral a + 256 * word8sToInteger as
 -- Locale's are geometric points with metadat about their derivation
 --------------------------------------------------------------------------------
 
-data Locale (m :: Nat) (n :: Nat) (a :: Asset) = Locale
+data Locale (a :: Asset) (m :: Nat) (n :: Nat) = Locale
   { lCoordinate :: Coordinate2 m n
   , lAddress :: Address a
   , lPath :: DerivationPath
   } deriving Show
 
-deriveLocale :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> DerivationPath -> Maybe (Locale m n a)
+deriveLocale :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> DerivationPath -> Maybe (Locale a m n)
 deriveLocale sAsset xpub p2 dpath = scaleLocale p2 <$> deriveFibreLocale sAsset xpub dpath
 
-type FibreLocale a = Locale MaxHashSize MaxHashSize a
+type FibreLocale a = Locale a MaxHashSize MaxHashSize
 
 deriveFibreLocale :: SAsset a -> XPub -> DerivationPath -> Maybe (FibreLocale a)
 deriveFibreLocale sAsset xpub dpath = do
@@ -73,7 +73,7 @@ deriveFibreLocale sAsset xpub dpath = do
   let coordinate = addressTransform address
   pure $ Locale coordinate address dpath
 
-scaleLocale :: (KnownNats m1 n1, KnownNats m2 n2) => Plane2 m2 n2 -> Locale m1 n1 a -> Locale m2 n2 a
+scaleLocale :: (KnownNats m1 n1, KnownNats m2 n2) => Plane2 m2 n2 -> Locale a m1 n1 -> Locale a m2 n2
 scaleLocale p2 locale = locale{ lCoordinate = scaledCoordinate }
   where
     scaledCoordinate = projectTo p2 $ lCoordinate locale
