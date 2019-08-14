@@ -2,53 +2,147 @@
 
 module Paint.Graph where
 
-import Import hiding (elem, filter, length)
+import Import hiding (elem, filter, length, (\\), map, head, group, sort, sum)
 import Data.List
 import Data.Bifoldable
 
-data Edge2 v (m :: Nat) (n :: Nat) = Edge2 { eSrc :: v m n, eTgt :: v m n }
-deriving instance Show (v m n) => Show (Edge2 v m n)
-deriving instance Eq (v m n) => Eq (Edge2 v m n)
+data Edge v = Edge { eSrc :: v, eTgt :: v }
+deriving instance Show v => Show (Edge v)
+deriving instance Eq v => Eq (Edge v)
 
-vertices :: Eq (v m n) => [Edge2 v m n] -> [v m n]
+vertices :: Eq v => [Edge v] -> [v]
 vertices = const True $>> verticesSuchThat
 
-verticesSuchThat :: Eq (v m n) => (v m n -> Bool) -> [Edge2 v m n] -> [v m n]
+verticesSuchThat :: Eq v => (v -> Bool) -> [Edge v] -> [v]
 verticesSuchThat st es = es
   >>= ( edgeVertices >>> biList >>> filter st )
   $>> nub
 
-edgeVertices :: Edge2 v m n -> (v m n, v m n)
+edgeVertices :: Edge v -> (v, v)
 edgeVertices = eSrc &&& eTgt
 
-data Star2 v (m :: Nat) (n :: Nat) = Star2 { sSrc :: v m n, rayTgts :: [v m n] }
+data Star v = Star { sSrc :: v, rays :: [Edge v] }
+deriving instance Show v => Show (Star v)
 
-vertexEdges :: Eq (v m n) => [Edge2 v m n] -> v m n -> Star2 v m n
-vertexEdges es v = Star2 v tgts
+toGraph :: Star v -> Graph v
+toGraph = rays >>> Graph
+
+
+rayTgts :: Eq v => Star v -> [v]
+rayTgts s = verticesSuchThat (/= v) es
   where
-    tgts = es $>> mapMaybe (v `inEdgeM`) >>> verticesSuchThat (/= v)
-starSize :: Star2 v m n -> Integer
+    v = sSrc s
+    es = rays s
+
+vertexEdges :: Eq v => [Edge v] -> v -> Star v
+vertexEdges es v = Star v rays
+  where
+    rays = es $>> mapMaybe (v `inEdgeM`)
+
+starSize :: Eq v => Star v -> Integer
 starSize = rayTgts >>> length >>> fromIntegral
 
--- starIntersection :: Star2 v m n -> Star2 v m n -> Maybe (Edge2 v m n)
--- starIntersection
-
-inEdge :: Eq (v m n) => v m n -> Edge2 v m n -> Bool
+inEdge :: Eq v => v -> Edge v -> Bool
 inEdge v e = v `elem` (biList <<< edgeVertices <<$ e)
 
-inEdgeM :: Eq (v m n) => v m n -> Edge2 v m n -> Maybe (Edge2 v m n)
+inEdgeM :: Eq v => v -> Edge v -> Maybe (Edge v)
 inEdgeM v e = if (v `inEdge` e)
   then Just e
   else Nothing
 
-data Graph2 v (m :: Nat) (n :: Nat) = Graph2 { edges :: [Edge2 v m n] }
-deriving instance Show (v m n) => Show (Graph2 v m n)
-deriving instance Eq (v m n) => Eq (Graph2 v m n)
-mkGraph2 :: Eq (v m n) => [Edge2 v m n] -> Graph2 v m n
-mkGraph2 = nub >>> Graph2
+data Graph v  = Graph { edges :: [Edge v] }
+instance Eq v => Semigroup (Graph v) where
+  (Graph e1) <> (Graph e2) = Graph <<< rmdups <<$ e1 <> e2
+instance Eq v => Monoid (Graph v) where
+  mempty = Graph []
+singletonG :: v -> Graph v
+singletonG v = Graph <<$ [Edge v v]
 
-verticesG2 :: Eq (v m n) => Graph2 v m n -> [v m n]
-verticesG2 = edges >>> vertices
+deriving instance Show v => Show (Graph v)
+deriving instance Eq v => Eq (Graph v)
+mkGraph2 :: Eq v => [Edge v] -> Graph v
+mkGraph2 = nub >>> Graph
 
-vertexEdgesG2 :: Eq (v m n) => Graph2 v m n -> v m n -> Star2 v m n
-vertexEdgesG2 g v = vertexEdges (edges g) v
+verticesG :: Eq v => Graph v -> [v]
+verticesG = edges >>> vertices
+
+vertexInGraph :: Eq v => Graph v ->  v -> Bool
+vertexInGraph g v = v `elem` verticesG g
+
+vertexEdgesG :: Eq v => Graph v -> v -> Star v
+vertexEdgesG g v = vertexEdges (edges g) v
+
+connectedComponents :: (Show v, Eq v) => [Graph v] -> Graph v -> [Graph v]
+connectedComponents _ (Graph []) = []
+connectedComponents visitedComponents g =
+  case remainingVertices of
+    [] -> []
+    (next:_) -> let nextComponent = componentFor visitedVertices g next in
+      nextComponent : (connectedComponents (nextComponent : visitedComponents) g)
+  where
+    visitedVertices = join <<< fmap verticesG <<$ visitedComponents
+    remainingVertices = verticesG g \\ visitedVertices
+
+componentFor :: Eq v =>  [v] -> Graph v -> v -> Graph v
+componentFor _ (Graph []) v = singletonG v
+componentFor visited (Graph es) v = mconcat <<$ toGraph vStar : recurse1
+  where
+    vStar = vertexEdges es v
+    remainingEdges = es \\ (rays vStar)
+
+    adjacentVertices = rayTgts vStar \\ visited
+    visited' = adjacentVertices <> visited
+    recurse1 = fmap (componentFor visited' (Graph remainingEdges)) adjacentVertices
+
+data StarTree v = StarTree v [StarTree v]
+instance Eq v => Eq (StarTree v) where
+  (StarTree v sts) == (StarTree v2 sts2) = v == v2 && sts == sts2
+instance Show v => Show (StarTree v) where
+  show (StarTree v sts) = show v <> showBranches
+    where
+      showBranches = if length sts == 0 then ""
+        else "-<" <> show sts <> ">-"
+node :: StarTree v -> v
+node (StarTree v _) = v
+branches :: StarTree v -> [StarTree v]
+branches (StarTree _ sts) = sts
+
+data BranchCounter v = BranchCounter { val :: v, subBranches :: Integer, subTrees :: Integer }
+deriving instance Show v => Show (BranchCounter v)
+
+withBranchCounter :: StarTree v -> StarTree ( BranchCounter v )
+withBranchCounter (StarTree v []) = StarTree (BranchCounter v 0 0) []
+withBranchCounter (StarTree v sts) = StarTree (BranchCounter v subBranchCount subTreeCount) nextIteration
+  where
+    nextIteration = fmap withBranchCounter sts
+    branchCount = fromIntegral <<$ length sts
+    subBranchCount = branchCount + (sum <<< fmap (subBranches <<< node) <<$ nextIteration)
+    subTreeCount = 1 + (sum <<< fmap (subTrees <<< node) <<$ nextIteration)
+
+-- a disconnected graph will only return star tree for component containing v
+graphToStarTree :: (Show v, Eq v)  => Graph v -> v -> StarTree v
+graphToStarTree g v = snd <<$ graphToStarTree' g v
+
+graphToStarTree' :: (Show v, Eq v) => Graph v -> v -> ([Edge v], StarTree v)
+graphToStarTree' g v
+  | not (vertexInGraph g v) = ([], StarTree v [])
+  | otherwise = ret
+  where
+    nextSrcStar = vertexEdgesG g v
+    nextVertices = rayTgts nextSrcStar
+
+    ret = case nextVertices of
+      [] -> ([], StarTree v [])
+      vs -> let (def:nextTrees) = scanl mySmash (rays nextSrcStar, StarTree v []) vs in
+        (fromMaybe [] (lastMay $ fmap fst nextTrees) , StarTree v (fmap snd nextTrees))
+
+    mySmash (usedEdges, _) vertex =
+      first (<> usedEdges) $ graphToStarTree' (Graph $ (edges g \\ usedEdges)) vertex
+
+leaves :: StarTree v -> [v]
+leaves (StarTree v []) = [v]
+leaves (StarTree v es) = es >>= leaves
+
+subbranches :: StarTree v -> [v]
+subbranches (StarTree v []) = [v]
+subbranches (StarTree v es) = v : (es >>= leaves)

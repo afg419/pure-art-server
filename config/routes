@@ -3,3 +3,4 @@
 
 -- /register RegisterXPubR POST
 /canvas/new InitCanvasGenerationR POST
+-- /paint/new InitPaintR POST

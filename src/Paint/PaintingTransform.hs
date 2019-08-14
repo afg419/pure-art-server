@@ -1,9 +1,21 @@
 module Paint.PaintingTransform where
 
-data TxPainting = TxPainting { sourceTxs :: [Tx], paintingTxs :: [Tx] }
+import PointGen
+import Import hiding ((\\))
+import Paint.Graph
+import Paint.Transaction
+import Paint.Painting
+import Data.List ((\\))
 
-paintingToTransactions :: Painting2 a m n -> [Utxo] -> TxPainting
-paintingToTransactions p =
-  where
-    vs = verticesG2 p
-    vertexStars = vs $>> fmap (vertexEdgesG2 p) >>> sortOn starSize
+                                             
+-- paintingTransform :: Painting2 a m n -> TxPainting a m n
+-- paintingTransform p = _
+--   where
+--     components = connectedComponents [] p
+--
+-- -- single component transform
+-- paintingTransform' :: Painting2 a m n -> SomeScaffold
+-- paintingTransform' (Graph []) = TxPainting [] (InitTxScaffold []) []
+-- paintingTransform' (Graph first:es) =
+--   where
+--     starts = [eSrc first]

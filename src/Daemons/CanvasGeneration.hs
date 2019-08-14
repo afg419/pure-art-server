@@ -6,6 +6,7 @@ import PointGen
 import Model
 import Effects.CanvasGeneration
 import Effects.Common
+import Paint.Painting
 import Data.Singletons
 import Data.List ((\\))
 import Import hiding (undefined, length, sum, filter, elem, (\\))
@@ -67,7 +68,7 @@ generatePaintingCanvasLogic xpub scid painting totalTries = do
         let locales = catMaybes <<< fmap (deriveLocale sAsset xpub targetPlane) $ (pathsForIndices tries)
 
         insertPlane2Locales scid locales
-        updateCanvas2NextPathIndex scid (nextTry + totalTries1)
+        updateCanvas2NextPathIndex scid (nextTry + totalTries)
 
         found <- fmap (fromIntegral <<< length) <<< getPlane2Locales $ scid
         pure <<< Right $ GeneratePaintingCanvasRes found totalCoordinates
