@@ -3,7 +3,7 @@ module Import
     ) where
 
 import Foundation            as Import
-import Import.NoFoundation   as Import hiding (all, length, (\\))
+import Import.NoFoundation   as Import hiding (all, length, (\\), zip)
 import Control.Category      as Import
 import GHC.Read as Import
 import GHC.Generics as Import

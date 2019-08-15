@@ -1,23 +1,56 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Paint.Transaction where
 
 import qualified Network.Haskoin.Network as H
 import PointGen
 
-import Data.Vector.Sized
 import Data.Finite
+import Paint.Graph
 import Import hiding (Vector, index)
 
 
+newtype TxScaffoldId v = TxScaffoldId Integer
+deriving instance Num (TxScaffoldId v)
+data TxScaffold v = TxScaffold { txid :: TxScaffoldId v, input :: InputScaffold v, outs :: [v] }
+data InputScaffold v where
+  InputScaffold :: { prevId :: TxScaffoldId v, vout :: Integer, from :: v } -> InputScaffold v
+  InitInputScaffold :: v -> InputScaffold v
 
--- data TxScaffold (a :: Asset) (m :: Nat) (n :: Nat) = TxScaffold { id :: TxScaffoldId, input :: OutpointScaffold v, outs :: [v] }
+mkInputScaffolds :: TxScaffold v -> [InputScaffold v]
+mkInputScaffolds (TxScaffold txid' input outs') = fmap toInput indexedOuts
+  where
+    indexedOuts = withIndices outs'
+    toInput (index, out) = InputScaffold txid' index out
+
+withIndices :: [a] -> [(Integer, a)]
+withIndices [] = []
+withIndices (a:as) = scanl smash (0,a) as
+  where
+    smash (i,_) nextA = (i+1, nextA)
+
+-- one startree per connected component of original graph
+-- toTxScaffold :: v -> [StarTree v] -> [TxScaffold v]
+-- toTxScaffold hotV [] = [TxScaffold 0 (InitScaffold hotV) []]
+-- toTxScaffold hotV sts = undefined
+--   where
+
+toTxScaffold' :: InputScaffold v -> StarTree v -> [TxScaffold v]
+toTxScaffold' input (StarTree v []) = []
+toTxScaffold' input (StarTree v sts) = (thisScaffold:nextScaffolds)
+  where
+    thisId = case input of
+      InputScaffold prevId _ _ -> prevId + 1
+      InitInputScaffold _ -> 0
+
+    thisScaffold = TxScaffold thisId input (fmap node sts)
+    theseInputs = zip (mkInputScaffolds thisScaffold) sts
+
+    toTxScaffoldPairs = uncurry toTxScaffold'
+    nextScaffolds = theseInputs >>= toTxScaffoldPairs
 --
--- data OutpointScaffold v = OutpointScaffold { prevId :: TxScaffoldId, vout :: Integer }
 
--- data TxScaffold (a :: Asset) (k :: Nat) (m :: Nat) (n :: Nat) where
---   TxScaffold :: PreOutpoint a m n -> Vector k (Locale a m n) -> TxScaffold a k m n
---   InitTxScaffold :: Vector k (Locale a m n) -> TxScaffold a k m n
 --
 -- toLocales :: TxScaffold a k m n -> Vector k (Locale a m n)
 -- toLocales (TxScaffold _ v) = v
