@@ -1,54 +1,16 @@
-## Database Setup
+# Pure Art v0 (WIP)
 
-After installing Postgres, run:
+### Idea:
 
-```
-createuser pure-art-server --pwprompt --superuser
-# Enter password pure-art-server when prompted
-createdb pure-art-server
-createdb pure-art-server_test
-```
-whatttt
-## Haskell Setup
+This project stems from a very simple observation. Given a string of letters or numbers `s`, `h(x|s)` and `h(y|s)` for some hash function `h` can represent a coordinate on a two dimensional plane with dimensions equal to the cardinality of the range of `h`. By taking `s` to be (e.g) Bitcoin addresses and `h` to be (e.g) Sha256, we can associate a point to every Bitcoin address. Transactions between addresses can then be visualized as line segments between the points corresponding to the addresses. We can render a block (or even the entire blockchain) in this manner, leading to what mostly likely would appear as a chaotic mess of lines on a plane.
 
-1. If you haven't already, [install Stack](https://haskell-lang.org/get-started)
-	* On POSIX systems, this is usually `curl -sSL https://get.haskellstack.org/ | sh`
-2. Install the `yesod` command line tool: `stack install yesod-bin --install-ghc`
-3. Build libraries: `stack build`
+However, we can also take advantage of this correspondence between blockchain and geometry "in reverse". Start with a vector image of line segments, rendered in some resolution `k` by `l`. Scaling our 2^256 sized plane down to `k x l` results in huge collections of addresses all corresponding to the same point in the `k x l` plane. This makes the idea of computing vanity addresses with the property that their coordinate maps to a given coordinate in `k x l` feasible. (Early performance testing provides that _every_ point in a `1000 x 1000` plane could have a corresponding address generated at random in ~ 40 min in an unoptimized system.) Once vanity addresses have been computed for every endpoint in the image, transactions can be created between this addresses and posted to chain: your vector art will be encoded into the fabric of the chain for all time.
 
-If you have trouble, refer to the [Yesod Quickstart guide](https://www.yesodweb.com/page/quickstart) for additional detail.
+### Progress:
 
-## Development
-
-Start a development server with:
-
-```
-stack exec -- yesod devel
-```
-
-As your code changes, your site will be automatically recompiled and redeployed to localhost.
-
-## Tests
-
-```
-stack test --flag pure-art-server:library-only --flag pure-art-server:dev
-```
-
-(Because `yesod devel` passes the `library-only` and `dev` flags, matching those flags means you don't need to recompile between tests and development, and it disables optimization to speed up your test compile times).
-
-## Documentation
-
-* Read the [Yesod Book](https://www.yesodweb.com/book) online for free
-* Check [Stackage](http://stackage.org/) for documentation on the packages in your LTS Haskell version, or [search it using Hoogle](https://www.stackage.org/lts/hoogle?q=). Tip: Your LTS version is in your `stack.yaml` file.
-* For local documentation, use:
-	* `stack haddock --open` to generate Haddock documentation for your dependencies, and open that documentation in a browser
-	* `stack hoogle <function, module or type signature>` to generate a Hoogle database and search for your query
-* The [Yesod cookbook](https://github.com/yesodweb/yesod-cookbook) has sample code for various needs
-
-## Getting Help
-
-* Ask questions on [Stack Overflow, using the Yesod or Haskell tags](https://stackoverflow.com/questions/tagged/yesod+haskell)
-* Ask the [Yesod Google Group](https://groups.google.com/forum/#!forum/yesodweb)
-* There are several chatrooms you can ask for help:
-	* For IRC, try Freenode#yesod and Freenode#haskell
-	* [Functional Programming Slack](https://fpchat-invite.herokuapp.com/), in the #haskell, #haskell-beginners, or #yesod channels.
+- X vanity address generation 
+- WIP graph conversion to transaction sequence
+- WIP end wallet
+- front end paint canvas
+- gallery to view art
+- marketplace to purchase and transfer ownership of art

@@ -29,11 +29,11 @@ deriveManyAddressesBenchT xpub top = do
   let result = fromIntegral <<< length <<< catMaybes <<< fmap snd $ derivations
   pure (result, before)
 
-deriveManyLocalesBenchT2 :: (KnownNats m n) => XPub -> Integer -> Plane2 m n -> [Locale m n 'DOGE]
+deriveManyLocalesBenchT2 :: (KnownNats m n) => XPub -> Integer -> Plane2 m n -> [Locale 'DOGE m n]
 deriveManyLocalesBenchT2 xpub top p2 = catMaybes <<< fmap (deriveLocale SDOGE xpub p2) $ (pathsForIndices [0..top])
 
-benchBulkTest :: KnownNats m n => Plane2 m n -> Integer -> IO (Either String GenerateCanvasRes)
+benchBulkTest :: KnownNats m n => Plane2 m n -> Integer -> IO (Either String GenerateWholeCanvasRes)
 benchBulkTest p2 totalRecords = handler $ do
   runEffects (run @PsqlDB) $ do
     sCanvasId <- (fst <<< fromJust <<< eToM) <$> liftEffectful (insertCanvas2 SDOGE xpubT p2)
-    generateCanvasLogic xpubT sCanvasId totalRecords
+    generateWholeCanvasLogic xpubT sCanvasId totalRecords

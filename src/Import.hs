@@ -3,7 +3,7 @@ module Import
     ) where
 
 import Foundation            as Import
-import Import.NoFoundation   as Import
+import Import.NoFoundation   as Import hiding (all, length, (\\))
 import Control.Category      as Import
 import GHC.Read as Import
 import GHC.Generics as Import
@@ -41,3 +41,11 @@ bToM :: (a -> Bool) -> a -> Maybe a
 bToM test a = if test a
   then Just a
   else Nothing
+
+-- debug :: Show a => String -> a -> a
+-- debug s a = trace (s <> show a) a
+
+rmdups :: Eq a => [a] -> [a]
+rmdups [] = []
+rmdups (x:xs)   | x `Prelude.elem` xs   = rmdups xs
+                | otherwise     = x : rmdups xs

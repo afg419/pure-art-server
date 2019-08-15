@@ -50,6 +50,10 @@ dependencies:
 - QuickCheck
 - basement
 - quickcheck-assertions
+- haskoin-core
+- comonad
+- vector-sized
+- finite-typelits
 
 # The library contains all of our application code. The executable
 # defined below is just a thin wrapper.
@@ -103,6 +107,9 @@ flags:
     default: false
   dev:
     description: Turn on development settings, like auto-reload templates.
+    manual: false
+    default: false
+  deferred-type-holes:
     manual: false
     default: false
 
