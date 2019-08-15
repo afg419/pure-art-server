@@ -43,15 +43,15 @@ textProject t = fromJust $ mkCoordinate xCoord yCoord P2
     xBase = pack "x" <> baseToHash
     yBase = pack "y" <> baseToHash
 
-    toCoordinate = word8sToInteger <<< BA.unpack <<< Crypto.hash256 <<< encodeUtf8
-
-    xCoord = toCoordinate xBase
-    yCoord = toCoordinate yBase
+    xCoord = hashIntoInteger xBase
+    yCoord = hashIntoInteger yBase
 
 word8sToInteger :: [Word8] -> Integer
 word8sToInteger [] = 0
 word8sToInteger (a:as) = fromIntegral a + 256 * word8sToInteger as
 
+hashIntoInteger :: Text -> Integer
+hashIntoInteger = word8sToInteger <<< BA.unpack <<< Crypto.hash256 <<< encodeUtf8
 --------------------------------------------------------------------------------
 -- Locale's are geometric points with metadat about their derivation
 --------------------------------------------------------------------------------

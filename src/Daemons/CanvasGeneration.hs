@@ -9,7 +9,7 @@ import Effects.Common
 import Paint.Painting
 import Data.Singletons
 import Data.List ((\\))
-import Import hiding (undefined, length, sum, filter, elem, (\\))
+import Import hiding (undefined, sum, filter, elem)
 
 data GenerateWholeCanvasRes = GenerateWholeCanvasRes { foundCoordinates :: Integer, totalCoordinates :: Integer } deriving (Eq, Show)
 
@@ -46,6 +46,7 @@ data GeneratePaintingCanvasRes = GeneratePaintingCanvasRes
   , totalPaintingCoordinates :: Integer
   } deriving (Eq, Show)
 
+-- TODO: this isn't right.
 generatePaintingCanvasLogic ::
   forall r m n a. (CanvasGeneration r, KnownNats m n, SingI a)
   => XPub
@@ -53,7 +54,7 @@ generatePaintingCanvasLogic ::
   -> Painting2 a m n
   -> Integer
   -> Effectful (Interpreter r) (Either String GeneratePaintingCanvasRes)
-generatePaintingCanvasLogic xpub scid painting totalTries = do
+generatePaintingCanvasLogic xpub scid _ totalTries = do
   i <- interpret <$> ask
   i $ do
     -- TODO: check origin address for sufficient funds
@@ -61,7 +62,7 @@ generatePaintingCanvasLogic xpub scid painting totalTries = do
     case mCanvas2 of
       Nothing -> pure $ Left "Canvas not found."
       Just (SCanvas2 (Canvas2{..}), sAsset) -> do
-        foundLocales <- getPlane2Locales scid
+        -- foundLocales <- getPlane2Locales scid
 
         let nextTry = fromIntegral canvas2NextPathIndex
         let tries = [nextTry .. nextTry + totalTries - 1]

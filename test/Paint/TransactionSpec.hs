@@ -10,13 +10,15 @@ import Data.Maybe
 import Paint
 
 -- center preserverd
-prop_starGraphToSpanningTree1 :: IO ()
-prop_starGraphToSpanningTree1 = quickCheck $ do
+prop_starTreeToScaffold1 :: IO ()
+prop_starTreeToScaffold1 = quickCheck $ do
   star :: Star Integer <- arbitrary
   let starGraph = toGraph star
-  let center = sSrc star
-  let (StarTree v sts) = graphToStarTree starGraph center
-  pure $ (v === center) .&&. (fmap (Edge center <<< node) sts) === rays star
+  let tree = graphToStarTree starGraph
+
+  scaffold = toTxScaffold 10000 [tree]
+
+  pure $ show scaffold === ""
 
 prop_getDepth1 :: IO ()
 prop_getDepth1 = quickCheck $ do

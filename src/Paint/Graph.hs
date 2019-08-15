@@ -2,7 +2,7 @@
 
 module Paint.Graph where
 
-import Import hiding (elem, filter, length, (\\), map, head, group, sort, sum)
+import Import hiding (elem, filter, map, head, group, sort, sum)
 import Data.List
 import Data.Bifoldable
 
@@ -133,7 +133,7 @@ graphToStarTree' g v
 
     ret = case nextVertices of
       [] -> ([], StarTree v [])
-      vs -> let (def:nextTrees) = scanl mySmash (rays nextSrcStar, StarTree v []) vs in
+      vs -> let (_:nextTrees) = scanl mySmash (rays nextSrcStar, StarTree v []) vs in
         (fromMaybe [] (lastMay $ fmap fst nextTrees) , StarTree v (fmap snd nextTrees))
 
     mySmash (usedEdges, _) vertex =
@@ -141,7 +141,7 @@ graphToStarTree' g v
 
 leaves :: StarTree v -> [v]
 leaves (StarTree v []) = [v]
-leaves (StarTree v es) = es >>= leaves
+leaves (StarTree _ es) = es >>= leaves
 
 subbranches :: StarTree v -> [v]
 subbranches (StarTree v []) = [v]

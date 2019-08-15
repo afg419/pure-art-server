@@ -3,7 +3,7 @@
 module Live where
 
 import PointGen
-import Import hiding (length, catMaybes, id)
+import Import hiding (catMaybes, id)
 import Data.Maybe (fromJust, catMaybes)
 import Daemons.CanvasGeneration
 import Effects.Interpreters
@@ -12,7 +12,7 @@ import Effects.CanvasGeneration
 import Application
 
 xpubT :: XPub
-xpubT = fromJust <<< parseXPub $ "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
+xpubT = fromJust <<< parseXPub <<$ "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
 
 coordinateT :: KnownNats m n => Plane2 m n -> Coordinate2 m n
 coordinateT p2 = Coordinate2 { x = 0, y = 0, plane = p2 }

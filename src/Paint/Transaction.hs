@@ -3,23 +3,31 @@
 
 module Paint.Transaction where
 
-import qualified Network.Haskoin.Network as H
+-- import qualified Network.Haskoin.Network as H
 import PointGen
 
-import Data.Finite
 import Paint.Graph
 import Import hiding (Vector, index)
 
+mkScaffoldId :: Text -> TxScaffoldId v
+mkScaffoldId = TxScaffoldId <<< (`div` embarrasinglyLargeNumber) <<< hashIntoInteger
 
 newtype TxScaffoldId v = TxScaffoldId Integer
+instance Eq (TxScaffoldId v) where
+  (TxScaffoldId v1) == (TxScaffoldId v2) = v1 == v2
+
+instance Show (TxScaffoldId v) where
+  show (TxScaffoldId v1) = show v1
+
 deriving instance Num (TxScaffoldId v)
 data TxScaffold v = TxScaffold { txid :: TxScaffoldId v, input :: InputScaffold v, outs :: [v] }
 data InputScaffold v where
   InputScaffold :: { prevId :: TxScaffoldId v, vout :: Integer, from :: v } -> InputScaffold v
   InitInputScaffold :: v -> InputScaffold v
+deriving instance Eq v => Eq (InputScaffold v)
 
 mkInputScaffolds :: TxScaffold v -> [InputScaffold v]
-mkInputScaffolds (TxScaffold txid' input outs') = fmap toInput indexedOuts
+mkInputScaffolds (TxScaffold txid' _ outs') = fmap toInput indexedOuts
   where
     indexedOuts = withIndices outs'
     toInput (index, out) = InputScaffold txid' index out
@@ -31,26 +39,26 @@ withIndices (a:as) = scanl smash (0,a) as
     smash (i,_) nextA = (i+1, nextA)
 
 -- one startree per connected component of original graph
--- toTxScaffold :: v -> [StarTree v] -> [TxScaffold v]
--- toTxScaffold hotV [] = [TxScaffold 0 (InitScaffold hotV) []]
--- toTxScaffold hotV sts = undefined
---   where
-
-toTxScaffold' :: InputScaffold v -> StarTree v -> [TxScaffold v]
-toTxScaffold' input (StarTree v []) = []
-toTxScaffold' input (StarTree v sts) = (thisScaffold:nextScaffolds)
+toTxScaffold :: Show v => v -> [StarTree v] -> [TxScaffold v]
+toTxScaffold _ [] = []
+toTxScaffold hotV sts = sts >>= toTxScaffold' initInput
   where
-    thisId = case input of
-      InputScaffold prevId _ _ -> prevId + 1
-      InitInputScaffold _ -> 0
+    initInput = InitInputScaffold hotV
 
-    thisScaffold = TxScaffold thisId input (fmap node sts)
+toTxScaffold' :: Show v => InputScaffold v -> StarTree v -> [TxScaffold v]
+toTxScaffold' _ (StarTree _ []) = []
+toTxScaffold' input' (StarTree v sts) = (thisScaffold:nextScaffolds)
+  where
+    thisId = mkScaffoldId <<< pack <<< (show v <>) <<< show <<< fmap (show <<< node) <<$ sts
+
+    thisScaffold = TxScaffold thisId input' (fmap node sts)
     theseInputs = zip (mkInputScaffolds thisScaffold) sts
 
     toTxScaffoldPairs = uncurry toTxScaffold'
     nextScaffolds = theseInputs >>= toTxScaffoldPairs
 --
-
+embarrasinglyLargeNumber :: Integer
+embarrasinglyLargeNumber = 1000000000000000000000000000000000000000000000000
 --
 -- toLocales :: TxScaffold a k m n -> Vector k (Locale a m n)
 -- toLocales (TxScaffold _ v) = v
