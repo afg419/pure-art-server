@@ -5,34 +5,63 @@ import Test.QuickCheck.Assertions ((<=?))
 import Gen.PointGen
 import Gen.Paint
 import PointGen
-import Import hiding (print, length)
+import Import hiding (print, length, from)
 import Data.Maybe
 import Paint
+import Data.List ((\\))
 
--- center preserverd
 prop_starTreeToScaffold1 :: IO ()
 prop_starTreeToScaffold1 = quickCheck $ do
-  star :: Star Integer <- arbitrary
+  star :: Star String <- arbitrary
   let starGraph = toGraph star
-  let tree = graphToStarTree starGraph
+  let tree = graphToStarTree starGraph (sSrc star)
 
-  scaffold = toTxScaffold 10000 [tree]
+  let [scaffold] = toTxScaffold "hotAddress" [tree]
 
-  pure $ show scaffold === ""
+  pure $ (outs scaffold) === (rayTgts star)
 
-prop_getDepth1 :: IO ()
-prop_getDepth1 = quickCheck $ do
-  star :: Star Integer <- arbitrary
-  let starGraph = toGraph star
-  let center = sSrc star
-  let (StarTree (BranchCounter v subBs subTs) sts) = withBranchCounter <<< graphToStarTree starGraph <<$ center
-
-  let firstAssert = subBs === (fromIntegral <<< length <<$ sts)
-  let secondAssert = all (== 0) <<< fmap (subBranches <<< node) <<$ sts
-  let thirdAssert = subTs === 1
-  pure $ firstAssert .&&. secondAssert .&&. thirdAssert
-
-prop_getsConnectedComponents1 :: IO ()
-prop_getsConnectedComponents1 = quickCheck $ do
+prop_starTreeToScaffold2_DisconnectedTrees :: IO ()
+prop_starTreeToScaffold2_DisconnectedTrees = quickCheck $ do
   c1 :: Star Integer <- arbitrary
-  pure $ 1 === (length <<< connectedComponents [] <<$ (toGraph c1))
+  let t1 = graphToStarTree (toGraph c1) (sSrc c1)
+
+  nextCenter <- arbitrary `suchThat` (not <<< inStar c1)
+  c2 <- arbitraryStarAt' nextCenter (sSrc c1:rayTgts c1)
+  let t2 = graphToStarTree (toGraph c2) (sSrc c2)
+
+  let [hotScaffold, c1Scaffold, c2Scaffold] = toTxScaffold 1000 [t1, t2]
+
+  pure $   outs hotScaffold === [sSrc c1, sSrc c2]
+      .&&. outs c1Scaffold === rayTgts c1
+      .&&. outs c2Scaffold === rayTgts c2
+      .&&. (from $ input c1Scaffold) === sSrc c1
+      .&&. (from $ input c2Scaffold) === sSrc c2
+
+prop_starTreeToScaffold3_LengthenedTree :: IO ()
+prop_starTreeToScaffold3_LengthenedTree = quickCheck $ do
+  c1 :: Star Integer <- arbitrary `suchThat` \s -> length (rayTgts s) > 0
+
+  center2 <- elements (rayTgts c1)
+  c2 <- arbitraryStarAt center2
+  let t = graphToStarTree (toGraph c2 <> toGraph c1) (sSrc c1)
+
+  let gs = toTxScaffold 1000 [t]
+
+  pure $ length gs === 3
+
+prop_starTreeToScaffold4_Cyclic :: IO ()
+prop_starTreeToScaffold4_Cyclic = quickCheck $ do
+  c1 :: Star Integer <- arbitrary `suchThat` \s -> length (rayTgts s) > 1
+
+  center2 <- elements (rayTgts c1)
+  c2 <- arbitraryStarAt center2 `suchThat` \s -> length (rayTgts s) > 1
+
+  toConnectBack1 <- elements (rayTgts c1 \\ [center2])
+  toConnectBack2 <- elements (rayTgts c2 \\ [sSrc c1])
+
+  let graph = toGraph c2 <> toGraph c1 <> (Graph [Edge toConnectBack1 toConnectBack2])
+  let t = graphToStarTree graph (sSrc c1)
+
+  let gs = toTxScaffold 1000 [t]
+
+  pure $ length gs === 3 .||. length gs === 4

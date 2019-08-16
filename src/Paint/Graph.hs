@@ -2,7 +2,7 @@
 
 module Paint.Graph where
 
-import Import hiding (elem, filter, map, head, group, sort, sum)
+import Import hiding (elem, filter, map, head, find, group, sort, sum, sortOn)
 import Data.List
 import Data.Bifoldable
 
@@ -27,6 +27,8 @@ deriving instance Show v => Show (Star v)
 toGraph :: Star v -> Graph v
 toGraph = rays >>> Graph
 
+inStar :: Eq v => Star v -> v -> Bool
+inStar s v = isJust $ find (==v) (sSrc s : rayTgts s)
 
 rayTgts :: Eq v => Star v -> [v]
 rayTgts s = verticesSuchThat (/= v) es
@@ -95,6 +97,9 @@ componentFor visited (Graph es) v = mconcat <<$ toGraph vStar : recurse1
     recurse1 = fmap (componentFor visited' (Graph remainingEdges)) adjacentVertices
 
 data StarTree v = StarTree v [StarTree v]
+starTreeShallowSize :: StarTree v -> Integer
+starTreeShallowSize = branches >>> length >>> fromIntegral
+
 instance Eq v => Eq (StarTree v) where
   (StarTree v sts) == (StarTree v2 sts2) = v == v2 && sts == sts2
 instance Show v => Show (StarTree v) where
@@ -102,8 +107,8 @@ instance Show v => Show (StarTree v) where
     where
       showBranches = if length sts == 0 then ""
         else "-<" <> show sts <> ">-"
-node :: StarTree v -> v
-node (StarTree v _) = v
+stSrc :: StarTree v -> v
+stSrc (StarTree v _) = v
 branches :: StarTree v -> [StarTree v]
 branches (StarTree _ sts) = sts
 
@@ -116,8 +121,8 @@ withBranchCounter (StarTree v sts) = StarTree (BranchCounter v subBranchCount su
   where
     nextIteration = fmap withBranchCounter sts
     branchCount = fromIntegral <<$ length sts
-    subBranchCount = branchCount + (sum <<< fmap (subBranches <<< node) <<$ nextIteration)
-    subTreeCount = 1 + (sum <<< fmap (subTrees <<< node) <<$ nextIteration)
+    subBranchCount = branchCount + (sum <<< fmap (subBranches <<< stSrc) <<$ nextIteration)
+    subTreeCount = 1 + (sum <<< fmap (subTrees <<< stSrc) <<$ nextIteration)
 
 -- a disconnected graph will only return star tree for component containing v
 graphToStarTree :: (Show v, Eq v)  => Graph v -> v -> StarTree v
@@ -129,7 +134,7 @@ graphToStarTree' g v
   | otherwise = ret
   where
     nextSrcStar = vertexEdgesG g v
-    nextVertices = rayTgts nextSrcStar
+    nextVertices = sortOn (((-1) *) <<< starSize <<< vertexEdgesG g) (rayTgts nextSrcStar)
 
     ret = case nextVertices of
       [] -> ([], StarTree v [])
