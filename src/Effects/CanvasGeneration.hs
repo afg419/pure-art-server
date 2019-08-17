@@ -17,41 +17,38 @@ originAddressPath = mkPath [0,0]
 
 class Effect s => CanvasGeneration s where
   -- returns id of record, and 0/0 address
-  insertCanvas2 :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> s (Either String (SCanvas2Id a m n, Address a))
-  getCanvas2    :: (SingI a, KnownNats m n) => SCanvas2Id a m n -> s (Maybe (SCanvas2 a m n, SAsset a))
-  updateCanvas2NextPathIndex :: SCanvas2Id a m n -> Integer -> s ()
+  insertCanvas2 :: KnownNats m n => XPub -> Plane2 m n -> s (Either String (SCanvas2Id m n))
+  getCanvas2    :: KnownNats m n => SCanvas2Id m n -> s (Maybe (SCanvas2 m n))
+  updateCanvas2NextPathIndex :: SCanvas2Id m n -> Integer -> s ()
 
   -- this uses a repsertMany so no duplicate coordinates stored
-  insertPlane2Locales :: KnownNats m n => SCanvas2Id a m n -> [Locale a m n] -> s ()
-  getPlane2Locales :: (SingI a, KnownNats m n) => SCanvas2Id a m n -> s [Locale a m n]
+  insertPlane2Locales :: KnownNats m n => SAsset a -> SCanvas2Id m n -> [Locale a m n] -> s ()
+  getPlane2Locales :: KnownNats m n => SAsset a -> SCanvas2Id m n -> s [Locale a m n]
 
 instance CanvasGeneration PsqlDB where
-  insertCanvas2 sAsset xpub p2 = do
-    let originAddress = lAddress <<< fromJust $ deriveLocale sAsset xpub p2 originAddressPath
+  insertCanvas2 xpub p2 = do
     now <- liftIO getCurrentTime
-    canvas2Id <- PsqlDB <<< insert $ canvas (originAddress, now)
-    pure <<< Right $ (SCanvas2Id canvas2Id, originAddress)
+    canvas2Id <- PsqlDB <<< insert <<$ canvas now
+    pure <<< Right <<< SCanvas2Id <<$ canvas2Id
       where
         (xSize, ySize) = plane2Dim p2
-        canvas = \(originAddress, now) -> Canvas2
+        canvas = \now -> Canvas2
           xpub
-          (fromSing sAsset)
           (fromIntegral xSize)
           (fromIntegral ySize)
-          (pack <<< show $ originAddress)
           0
           now
           now
   getCanvas2 (SCanvas2Id cId) = do
     mCanvas2 <- PsqlDB <<< get $ cId
-    pure <<< fmap (( , sing) <<< SCanvas2) $ mCanvas2
+    pure <<< fmap SCanvas2 $ mCanvas2
   updateCanvas2NextPathIndex (SCanvas2Id cId) nextIndex = [Canvas2NextPathIndex =. (fromIntegral nextIndex)]
     $>> update cId
     >>> PsqlDB
-  insertPlane2Locales scId locales = do
+  insertPlane2Locales sAsset scId locales = do
     now <- liftIO getCurrentTime
-    PsqlDB <<< repsertMany $ fmap ( toLocaleRecordKey scId &&& toLocaleRecord scId now) locales
-  getPlane2Locales scid@(SCanvas2Id cid) =
-    selectList [ LocaleRecordCanvas2Id ==. cid] []
-    $>> fmap (fmap $ entityVal >>> fromLocaleRecord sing scid)
+    PsqlDB <<< repsertMany $ fmap ( toLocaleRecordKey scId &&& (withSingI sAsset) (toLocaleRecord scId now)) locales
+  getPlane2Locales sAsset scid@(SCanvas2Id cid) =
+    selectList [ LocaleRecordCanvas2Id ==. cid, LocaleRecordAsset ==. (fromSing sAsset)] []
+    $>> fmap ((fmap $ entityVal >>> fromLocaleRecord sAsset scid) >>> catMaybes)
     >>> PsqlDB

@@ -1,14 +1,27 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Paint.Graph where
 
 import Import hiding (elem, filter, map, head, find, group, sort, sum, sortOn)
-import Data.List
+import Data.List hiding (last)
 import Data.Bifoldable
+import Data.Aeson
+import qualified Data.Vector as V
 
 data Edge v = Edge { eSrc :: v, eTgt :: v }
 deriving instance Show v => Show (Edge v)
-deriving instance Eq v => Eq (Edge v)
+instance Eq v => Eq (Edge v) where -- for now we don't distinguish between sources and targets
+  Edge s1 t1 == Edge s2 t2 = ((s1 == s2) || (s1 == t2)) && ((t1 == s2) || (t1 == t2))
+
+instance FromJSON v => FromJSON (Edge v) where
+  parseJSON = withArray "edge" $ \valueVector -> do
+    if V.length valueVector /= 2
+      then fail "Could not parse as edge, length not 2"
+      else do
+        src <- parseJSON <<$ V.head valueVector
+        tgt <- parseJSON <<$ V.last valueVector
+        pure $ Edge src tgt
 
 vertices :: Eq v => [Edge v] -> [v]
 vertices = const True $>> verticesSuchThat
@@ -57,6 +70,12 @@ instance Eq v => Semigroup (Graph v) where
   (Graph e1) <> (Graph e2) = Graph <<< rmdups <<$ e1 <> e2
 instance Eq v => Monoid (Graph v) where
   mempty = Graph []
+
+instance FromJSON v => FromJSON (Graph v) where
+  parseJSON = withArray "edge list" $ \edgeVector -> do
+    edges <- traverse parseJSON edgeVector
+    pure <<< Graph <<< toList <<$ edges
+
 singletonG :: v -> Graph v
 singletonG v = Graph <<$ [Edge v v]
 

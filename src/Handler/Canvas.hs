@@ -13,15 +13,14 @@ import PointGen
 import Data.Singletons
 
 data InitCanvasGenerationReq = InitCanvasGenerationReq
-  { asset :: Asset
-  , xpub :: XPub
+  { xpub :: XPub
   , planeStock :: PlaneStock
   } deriving (Eq, Show, Generic)
 
 instance FromJSON InitCanvasGenerationReq
 
 data InitCanvasGenerationRes = InitCanvasGenerationRes
-  { canvasId :: Text, originAddress :: Text } deriving (Eq, Show, Generic)
+  { canvasId :: Text } deriving (Eq, Show, Generic)
 
 instance ToJSON InitCanvasGenerationRes
 
@@ -38,8 +37,7 @@ initCanvasGenerationLogic :: CanvasGeneration r
   -> Effectful (Interpreter r) (Either String InitCanvasGenerationRes)
 initCanvasGenerationLogic InitCanvasGenerationReq{..} = do
   i <- interpret <$> ask
-  i $ withSomeSing asset $ \sAsset ->
-        withPlaneStock planeStock $ \plane -> insertCanvas2 sAsset xpub plane
-          $>> ( tshow *** tshow >>> uncurry InitCanvasGenerationRes
-                $>> fmap >>> fmap
-              )
+  i $ withPlaneStock planeStock $ \plane -> insertCanvas2 xpub plane
+        $>> ( tshow >>> InitCanvasGenerationRes
+              $>> fmap >>> fmap
+            )

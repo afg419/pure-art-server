@@ -35,5 +35,5 @@ deriveManyLocalesBenchT2 xpub top p2 = catMaybes <<< fmap (deriveLocale SDOGE xp
 benchBulkTest :: KnownNats m n => Plane2 m n -> Integer -> IO (Either String GenerateWholeCanvasRes)
 benchBulkTest p2 totalRecords = handler $ do
   runEffects (run @PsqlDB) $ do
-    sCanvasId <- (fst <<< fromJust <<< eToM) <$> liftEffectful (insertCanvas2 SDOGE xpubT p2)
-    generateWholeCanvasLogic xpubT sCanvasId totalRecords
+    sCanvasId <- (fromJust <<< eToM) <$> liftEffectful (insertCanvas2 xpubT p2)
+    generateWholeCanvasLogic SDOGE xpubT sCanvasId totalRecords
