@@ -23,6 +23,8 @@ import Data.Singletons.TH
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
     $(persistFileWith lowerCaseSettings "config/models.persistentmodels")
 
+
+
 data GInsert = Get | Insert
 
 newtype SCanvas2 (m :: Nat) (n :: Nat) = SCanvas2 Canvas2

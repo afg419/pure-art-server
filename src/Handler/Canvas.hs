@@ -32,12 +32,11 @@ postInitCanvasGenerationR = do -- pure $ InitCanvasGenerationRes "" ""
     Left _ -> throwString "fucked"
     Right res -> pure $ toJSON res
 
+-- TODO :: check that hotlocale is defined.
 initCanvasGenerationLogic :: CanvasGeneration r
   => InitCanvasGenerationReq
   -> Effectful (Interpreter r) (Either String InitCanvasGenerationRes)
 initCanvasGenerationLogic InitCanvasGenerationReq{..} = do
   i <- interpret <$> ask
   i $ withPlaneStock planeStock $ \plane -> insertCanvas2 xpub plane
-        $>> ( tshow >>> InitCanvasGenerationRes
-              $>> fmap >>> fmap
-            )
+        $>> ( tshow >>> InitCanvasGenerationRes $>> fmap >>> fmap )

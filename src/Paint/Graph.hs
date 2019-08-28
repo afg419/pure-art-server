@@ -131,7 +131,7 @@ stSrc (StarTree v _) = v
 branches :: StarTree v -> [StarTree v]
 branches (StarTree _ sts) = sts
 
-data BranchCounter v = BranchCounter { val :: v, subBranches :: Integer, subTrees :: Integer }
+data BranchCounter v = BranchCounter { val :: v, subBranches :: Integer, subTrees :: Integer } | BranchInitCounter v
 deriving instance Show v => Show (BranchCounter v)
 
 withBranchCounter :: StarTree v -> StarTree ( BranchCounter v )

@@ -5,7 +5,7 @@
 
 module Handler.Paint where
 
-import Import
+import Import hiding (undefined)
 import Effects.CanvasGeneration
 import Effects.Common
 import Effects.Interpreters
@@ -14,11 +14,12 @@ import Paint
 import Data.Singletons
 import Data.Aeson
 import Model
+import GHC.TypeLits.Witnesses
 
 data PaintScaffoldReq (m :: Nat) (n :: Nat) = PaintScaffoldReq
   { xpub :: XPub
   , canvasId :: Canvas2Id
-  , image :: (Graph (Coordinate2 m n))
+  , image :: Graph (Coordinate2 m n)
   , asset :: Asset
   } deriving (Eq, Show, Generic)
 
@@ -44,10 +45,27 @@ scaffoldPaintLogic :: (CanvasGeneration r, KnownNats m n)
 scaffoldPaintLogic (PaintScaffoldReq xpub canvasId image asset) = do
   pure $ PaintScaffoldRes []
 
-scaffoldPaintLogic' :: forall m n r. (KnownNats m n, CanvasGeneration r) => PaintScaffoldReq m n -> r (PaintScaffoldRes m n)
-scaffoldPaintLogic' (PaintScaffoldReq xpub canvasId image asset) = do
-  c :: Maybe (SCanvas2 m n) <- getCanvas2 (SCanvas2Id canvasId)
-  pure $ PaintScaffoldRes []
+-- withNats :: (Natural, Natural) -> (forall m n. (Sing m, Sing n) -> r) -> r
+-- withNats (i, j) f = withSomeNat i (\si -> withSomeNat j (\sj -> f (si, sj)))
+
+
+
+scaffoldPaintLogic' :: forall m n r. (KnownNats m n, CanvasGeneration r) => PaintScaffoldReq m n -> r (Either String (PaintScaffoldRes m n))
+scaffoldPaintLogic' (PaintScaffoldReq xpub canvasId image asset) = pure $ Right $ PaintScaffoldRes []
+  mCanvas2 :: Maybe (SCanvas2 m n) <- getCanvas2 (SCanvas2Id canvasId)
+  withSomeSing asset $ \sAsset -> pure $ do
+       SCanvas2 (Canvas2{..}) <- mToE ("Canvas not found for id: " <> (show canvasId)) mCanvas2
+       let hotL = hotLocale sAsset xpub
+
+
+  -- do
+
+  -- do $
+  --
+
+
+
+
 -- initCanvasGenerationLogic :: CanvasGeneration r
 --   => InitCanvasGenerationReq
 --   -> Effectful (Interpreter r) (Either String InitCanvasGenerationRes)

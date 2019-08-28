@@ -9,11 +9,7 @@ import Effects.Common
 import Effects.Interpreters
 import Database.Persist
 import Data.Singletons
-import Data.Maybe (fromJust)
-import Import hiding (id, undefined)
-
-originAddressPath :: DerivationPath
-originAddressPath = mkPath [0,0]
+import Import hiding (undefined)
 
 class Effect s => CanvasGeneration s where
   -- returns id of record, and 0/0 address
@@ -24,6 +20,13 @@ class Effect s => CanvasGeneration s where
   -- this uses a repsertMany so no duplicate coordinates stored
   insertPlane2Locales :: KnownNats m n => SAsset a -> SCanvas2Id m n -> [Locale a m n] -> s ()
   getPlane2Locales :: KnownNats m n => SAsset a -> SCanvas2Id m n -> s [Locale a m n]
+
+withCanvas :: Canvas2 -> ( forall m n. (KnownNat m, KnownNat n) => Plane2 m n -> s ) -> Maybe s
+withCanvas c f = withDimensions (xdim, ydim) f
+  where
+    xdim = fromIntegral <<< canvas2XSize <<$ c
+    ydim = fromIntegral <<< canvas2YSize <<$ c
+
 
 instance CanvasGeneration PsqlDB where
   insertCanvas2 xpub p2 = do

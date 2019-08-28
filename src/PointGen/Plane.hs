@@ -11,6 +11,7 @@ module PointGen.Plane where
 
 import Import hiding (Proxy)
 import Data.Proxy
+import Data.Singletons
 
 data Plane2 (m :: Nat) (n :: Nat) where
   P2 :: forall m n. (KnownNat m, KnownNat n) => Plane2 m n
@@ -19,6 +20,9 @@ deriving instance Eq (Plane2 m n)
 
 plane2Dim :: forall m n. (KnownNat m, KnownNat n) => Plane2 m n -> (Integer, Integer)
 plane2Dim _ = (fromIntegral <<< natVal $ Proxy @m , fromIntegral <<< natVal $ Proxy @n)
+
+plane2Dim' :: forall m n s. (KnownNat m, KnownNat n) => s m n -> (Integer, Integer)
+plane2Dim' _ = (fromIntegral <<< natVal $ Proxy @m , fromIntegral <<< natVal $ Proxy @n)
 
 data PlaneStock = SmallStock | MediumStock | LargeStock | XLargeStock
   deriving (Eq, Show, Generic, Bounded, Enum)
@@ -38,6 +42,12 @@ withPlaneStock SmallStock wPlane = wPlane smallPlane
 withPlaneStock MediumStock wPlane = wPlane mediumPlane
 withPlaneStock LargeStock wPlane = wPlane largePlane
 withPlaneStock XLargeStock wPlane = wPlane xLargePlane
+
+withDimensions :: (Integer, Integer) -> ( forall m n. (KnownNat m, KnownNat n) => Plane2 m n -> s ) -> Maybe s
+withDimensions (i,j) f = case (someNatVal i, someNatVal j) of
+  (Just (SomeNat (Proxy :: Proxy m)), Just (SomeNat (Proxy :: Proxy n))) ->
+    (P2 :: Plane2 m n) $>> f >>> Just
+  _ -> Nothing
 
 leqDimensionsThan :: (KnownNat m1, KnownNat n1, KnownNat m2, KnownNat n2)
   => Plane2 m1 n1 -> Plane2 m2 n2 -> Bool

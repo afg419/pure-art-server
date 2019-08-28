@@ -14,10 +14,11 @@ import PointGen.Asset
 import qualified Crypto.HDTree.Bip32 as Crypto
 import qualified Data.ByteArray                as BA
 import Data.Maybe
-import Import hiding (id, Proxy)
+import Import hiding (Proxy)
 import Data.Proxy
 
-
+hotLocale :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> Locale a m n
+hotLocale s xpub p = deriveLocale s xpub p hotPath $>> fromJust
 
 --------------------------------------------------------------------------------
 -- FibrePlane represents the abstract space of all addresses understood geometrically
@@ -28,7 +29,7 @@ type FibreCoordinate = Coordinate2 MaxHashSize MaxHashSize
 type MaxHashSize = 2^256
 
 maxHashSize :: Integer
-maxHashSize = fromIntegral <<< natVal $ Proxy @MaxHashSize
+maxHashSize = fromIntegral <<< natVal <<$ Proxy @MaxHashSize
 
 fibrePlane :: FibrePlane
 fibrePlane = P2

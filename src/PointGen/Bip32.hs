@@ -8,15 +8,19 @@ import qualified Crypto.HDTree.Bip32 as Crypto
 import qualified Crypto.HDTree.Address as Crypto
 import PointGen.Address
 import PointGen.Asset
-import Import hiding (get, id)
+import Import hiding (get)
 import Data.Aeson
 import Database.Persist.Sql
+import Data.Maybe (fromJust)
 
 deriveAddress :: SAsset a -> XPub -> DerivationPath -> Maybe (Address a)
 deriveAddress SDOGE xpub dpath =
   fmap
   (DogeA <<< Crypto.getDogeP2PKHAddress Crypto.MainNet <<< Crypto._extKey <<< runXPub)
   $ deriveXPub xpub dpath
+
+hotAddress :: SAsset a -> XPub -> Address a
+hotAddress sa x = deriveAddress sa x hotPath $>> fromJust
 
 --------------------------------------------------------------------------------
 -- XPubs
@@ -70,3 +74,6 @@ pathsForIndices = fmap (mkPath <<< (0:) <<< pure)
 
 deriveXPub :: XPub -> DerivationPath -> Maybe XPub
 deriveXPub (XPub xpub') (DerivationPath path') = XPub <$> Crypto.derivePathPub xpub' path'
+
+hotPath :: DerivationPath
+hotPath = mkPath [1,0]
