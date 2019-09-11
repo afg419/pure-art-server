@@ -17,7 +17,7 @@ import Data.Maybe
 import Import hiding (Proxy)
 import Data.Proxy
 
-hotLocale :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> Locale a m n
+hotLocale :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> SLocale a m n
 hotLocale s xpub p = deriveLocale s xpub p hotPath $>> fromJust
 
 --------------------------------------------------------------------------------
@@ -25,7 +25,7 @@ hotLocale s xpub p = deriveLocale s xpub p hotPath $>> fromJust
 --------------------------------------------------------------------------------
 
 type FibrePlane = Plane2 MaxHashSize MaxHashSize
-type FibreCoordinate = Coordinate2 MaxHashSize MaxHashSize
+type FibreCoordinate = SCoordinate2 MaxHashSize MaxHashSize
 type MaxHashSize = 2^256
 
 maxHashSize :: Integer
@@ -53,28 +53,31 @@ word8sToInteger (a:as) = fromIntegral a + 256 * word8sToInteger as
 
 hashIntoInteger :: Text -> Integer
 hashIntoInteger = word8sToInteger <<< BA.unpack <<< Crypto.hash256 <<< encodeUtf8
+
 --------------------------------------------------------------------------------
--- Locale's are geometric points with metadat about their derivation
+-- SLocale's are geometric points with metadat about their derivation
 --------------------------------------------------------------------------------
 
-data Locale (a :: Asset) (m :: Nat) (n :: Nat) = Locale
-  { lCoordinate :: Coordinate2 m n
+data SLocale (a :: Asset) (m :: Nat) (n :: Nat) = SLocale
+  { lCoordinate :: SCoordinate2 m n
   , lAddress :: Address a
   , lPath :: DerivationPath
-  } deriving Show
+  } deriving (Show, Eq)
 
-deriveLocale :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> DerivationPath -> Maybe (Locale a m n)
+data Locale = forall a m n. Locale (SLocale a m n)
+
+deriveLocale :: KnownNats m n => SAsset a -> XPub -> Plane2 m n -> DerivationPath -> Maybe (SLocale a m n)
 deriveLocale sAsset xpub p2 dpath = scaleLocale p2 <$> deriveFibreLocale sAsset xpub dpath
 
-type FibreLocale a = Locale a MaxHashSize MaxHashSize
+type FibreLocale a = SLocale a MaxHashSize MaxHashSize
 
 deriveFibreLocale :: SAsset a -> XPub -> DerivationPath -> Maybe (FibreLocale a)
 deriveFibreLocale sAsset xpub dpath = do
   address <- deriveAddress sAsset xpub dpath
   let coordinate = addressTransform address
-  pure $ Locale coordinate address dpath
+  pure $ SLocale coordinate address dpath
 
-scaleLocale :: (KnownNats m1 n1, KnownNats m2 n2) => Plane2 m2 n2 -> Locale a m1 n1 -> Locale a m2 n2
+scaleLocale :: (KnownNats m1 n1, KnownNats m2 n2) => Plane2 m2 n2 -> SLocale a m1 n1 -> SLocale a m2 n2
 scaleLocale p2 locale = locale{ lCoordinate = scaledCoordinate }
   where
     scaledCoordinate = projectTo p2 $ lCoordinate locale

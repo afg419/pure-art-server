@@ -16,6 +16,9 @@ $(singletons [d|
     deriving (Show, Eq, Generic)
   |])
 
+someAsset :: Asset -> SomeSing Asset
+someAsset DOGE = SomeSing SDOGE
+
 instance Enum Asset where
   fromEnum DOGE = 0
   toEnum 0 = DOGE

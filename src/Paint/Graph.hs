@@ -1,5 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
 
 module Paint.Graph where
 
@@ -9,7 +12,7 @@ import Data.Bifoldable
 import Data.Aeson
 import qualified Data.Vector as V
 
-data Edge v = Edge { eSrc :: v, eTgt :: v }
+data Edge v = Edge { eSrc :: v, eTgt :: v } deriving (Functor, Foldable, Traversable)
 deriving instance Show v => Show (Edge v)
 instance Eq v => Eq (Edge v) where -- for now we don't distinguish between sources and targets
   Edge s1 t1 == Edge s2 t2 = ((s1 == s2) || (s1 == t2)) && ((t1 == s2) || (t1 == t2))
@@ -65,7 +68,7 @@ inEdgeM v e = if (v `inEdge` e)
   then Just e
   else Nothing
 
-data Graph v  = Graph { edges :: [Edge v] }
+data Graph v  = Graph { edges :: [Edge v] } deriving (Functor, Foldable, Traversable)
 instance Eq v => Semigroup (Graph v) where
   (Graph e1) <> (Graph e2) = Graph <<< rmdups <<$ e1 <> e2
 instance Eq v => Monoid (Graph v) where

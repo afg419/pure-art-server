@@ -5,7 +5,7 @@
 
 module Handler.Paint where
 
-import Import hiding (undefined)
+import Import hiding (undefined, Proxy, natVal)
 import Effects.CanvasGeneration
 import Effects.Common
 import Effects.Interpreters
@@ -14,19 +14,19 @@ import Paint
 import Data.Singletons
 import Data.Aeson
 import Model
-import GHC.TypeLits.Witnesses
+import Data.Singletons.TypeLits
+import Control.Monad.Except
 
-data PaintScaffoldReq (m :: Nat) (n :: Nat) = PaintScaffoldReq
-  { xpub :: XPub
-  , canvasId :: Canvas2Id
-  , image :: Graph (Coordinate2 m n)
-  , asset :: Asset
-  } deriving (Eq, Show, Generic)
+-- import GHC.TypeNats
 
-instance KnownNats m n => FromJSON (PaintScaffoldReq m n)
+data PaintScaffoldReq = PaintScaffoldReq
+  { canvasId :: Canvas2Id
+  , image :: Graph Coordinate2
+  }
 
-data PaintScaffoldRes (m :: Nat) (n :: Nat) where
-  PaintScaffoldRes :: (KnownNats m n) => [TxScaffold (Locale a m n)] -> PaintScaffoldRes m n
+data PaintScaffoldRes v where
+  PaintScaffoldRes :: [TxScaffold (BranchCounter v)] -> PaintScaffoldRes v
+deriving instance Show v => (Show (PaintScaffoldRes v))
 
 postScaffoldPaintR :: Handler Value
 postScaffoldPaintR = do -- pure $ InitCanvasGenerationRes "" ""
@@ -39,24 +39,112 @@ postScaffoldPaintR = do -- pure $ InitCanvasGenerationRes "" ""
   --   Left _ -> throwString "fucked"
   --   Right res -> pure $ toJSON res
 
-scaffoldPaintLogic :: (CanvasGeneration r, KnownNats m n)
-  => PaintScaffoldReq m n
-  -> Effectful (Interpreter r) (PaintScaffoldRes m n)
-scaffoldPaintLogic (PaintScaffoldReq xpub canvasId image asset) = do
-  pure $ PaintScaffoldRes []
+-- scaffoldPaintLogic :: (CanvasGeneration r, KnownNats m n)
+--   => PaintScaffoldReq m n
+--   -> Effectful (Interpreter r) (PaintScaffoldRes m n)
+-- scaffoldPaintLogic (PaintScaffoldReq xpub canvasId image asset) = do
+--   pure $ PaintScaffoldRes []
+--
+-- -- withNats :: (Natural, Natural) -> (forall m n. (Sing m, Sing n) -> r) -> r
+-- -- withNats (i, j) f = withSomeNat i (\si -> withSomeNat j (\sj -> f (si, sj)))
+--
+--
+--
+-- scaffoldEstimationPaintLogic :: PaintScaffoldReq -> Either Text (PaintScaffoldRes (SCoordinate2 m n))
+-- scaffoldEstimationPaintLogic (PaintScaffoldReq cid image) = do
+--   mCanvas2 <- getCanvas2 cid
+--   case mCanvas2 of
+--     Nothing -> pure $ Left "Canvas not found"
+--     Just c2 ->
+--       sequenceA $ withPromotedEither
+--           (c2, image)
+--           paintScaffoldReqDecomp
+--           mkScaffoldReq
+--           sScaffoldBestFitPaintLogic
 
--- withNats :: (Natural, Natural) -> (forall m n. (Sing m, Sing n) -> r) -> r
--- withNats (i, j) f = withSomeNat i (\si -> withSomeNat j (\sj -> f (si, sj)))
+mkSCanvas2 :: KnownNats m n => CTY a m n -> Canvas2 -> Maybe (SCanvas2 a m n)
+mkSCanvas2 (CTY (sa, sx, sy)) c2 = if (fromSing sa, natVal sx, natVal sy) == canvasToCanvasTY c2
+  then Just (SCanvas2 c2)
+  else Nothing
+
+mkScaffoldReq :: forall m n a. KnownNats m n
+  => CTY a m n
+  -> Graph Coordinate2
+  -> Maybe (Graph (SCoordinate2 m n))
+mkScaffoldReq ty graph = traverse testVertextOOB graph
+  where
+    testVertextOOB v = mkCoordinate (fst v) (snd v) ty
 
 
+scaffoldBestFitPaintLogic :: (CanvasGeneration r) => PaintScaffoldReq -> r (Either Text (PaintScaffoldRes Locale))
+scaffoldBestFitPaintLogic (PaintScaffoldReq cid image) = runExceptT $ do
+    c2 <- ExceptT <<< fmap (mToE "Canvas not found") <<$ getCanvas2 cid
 
-scaffoldPaintLogic' :: forall m n r. (KnownNats m n, CanvasGeneration r) => PaintScaffoldReq m n -> r (Either String (PaintScaffoldRes m n))
-scaffoldPaintLogic' (PaintScaffoldReq xpub canvasId image asset) = pure $ Right $ PaintScaffoldRes []
-  mCanvas2 :: Maybe (SCanvas2 m n) <- getCanvas2 (SCanvas2Id canvasId)
-  withSomeSing asset $ \sAsset -> pure $ do
-       SCanvas2 (Canvas2{..}) <- mToE ("Canvas not found for id: " <> (show canvasId)) mCanvas2
-       let hotL = hotLocale sAsset xpub
+    withCanvasTy (canvasToCanvasTY c2) $ \cty -> do
+      sImage <- ExceptT <<< pure <<< mToE "vertices oob" <<$ mkScaffoldReq cty image
+      res <- ExceptT <<< fmap Right <<$ sScaffoldBestFitPaintLogic cty (SPaintScaffoldReq c2 cid sImage)
+      undefined
 
+  where
+    x :: CTY a m n -> r (Either Text (PaintScaffoldRes Locale))
+    x = error "shit"
+      -- sequenceA $ withPromotedEither
+      --     (c2, image)
+      --     paintScaffoldReqDecomp
+      --     mkScaffoldReq
+      --     sScaffoldBestFitPaintLogic
+
+-- sScaffoldEstimationPaintLogic :: (SingI a, CanvasGeneration r, KnownNats m n) => SPaintScaffoldReq a m n -> r PaintScaffoldRes
+-- sScaffoldEstimationPaintLogic (SPaintScaffoldReq _ _ sImage) = do
+--   locales <- getPlane2Locales scid
+--   let localesImage = fmap (getClosestLocale locales) sImage
+--   let hotL = hotLocale sAsset xpub P2
+--   pure <<< PaintScaffoldRes <<$ graphToTxScaffold hotL localesImage
+--   where
+--     getClosestLocale ls point = minOn (\l -> l1Dist (lCoordinate l) point) ls
+--     sAsset = sing
+--     xpub = canvas2Xpub c2
+
+data SPaintScaffoldReq m n = SPaintScaffoldReq
+  { c2 :: Canvas2
+  , cid :: Canvas2Id
+  , sImage :: Graph (SCoordinate2 m n)
+  }
+
+sScaffoldBestFitPaintLogic :: (CanvasGeneration r, KnownNats m n) => CTY a m n -> SPaintScaffoldReq m n -> r (PaintScaffoldRes (SLocale a m n))
+sScaffoldBestFitPaintLogic (CTY (sAsset, _, _) )(SPaintScaffoldReq c2 cid sImage) = do
+  locales <- getPlane2Locales sAsset cid
+  let localesImage = fmap (getClosestLocale locales) sImage
+  let hotL = hotLocale sAsset xpub P2
+  pure <<< PaintScaffoldRes <<$ graphToTxScaffold hotL localesImage
+  where
+    getClosestLocale ls point = minOn (\l -> l1Dist (lCoordinate l) point) ls
+    xpub = canvas2Xpub c2
+
+canvasToCanvasTY :: Canvas2 -> (Asset, Natural, Natural)
+canvasToCanvasTY Canvas2{..} =
+  ( canvas2Asset
+  , fromIntegral canvas2XSize
+  , fromIntegral canvas2YSize
+  )
+
+-- scaffoldBestFitPaintLogic :: forall m n r. (KnownNats m n, CanvasGeneration r) => Graph (Coordinate2 m n) -> SAsset a -> SCanvas2 a m n -> r (Maybe (PaintScaffoldRes))
+-- scaffoldPaintLogic (PaintScaffoldReq xpub scanvasId image sasset) = undefined
+--
+--
+--        let hotL = hotLocale sAsset xpub plane2
+--        locales <- getPlane2Locales sAsset (SCanvas2Id canvasId)
+--        graphToTxScaffold hotL
+--        PaintScaffoldRes []
+
+-- scaffoldPaintLogic' :: forall m n r. (KnownNats m n, CanvasGeneration r) => PaintScaffoldReq m n -> r (Maybe (PaintScaffoldRes m n))
+-- scaffoldPaintLogic' (PaintScaffoldReq xpub canvasId image asset) = withCanvasId canvasId $ \plane2 -> do
+--   withSomeSing asset $ \sAsset -> do
+--        let hotL = hotLocale sAsset xpub plane2
+--        locales <- getPlane2Locales sAsset (SCanvas2Id canvasId)
+--        graphToTxScaffold hotL
+--        PaintScaffoldRes []
+--
 
   -- do
 

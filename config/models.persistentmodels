@@ -3,9 +3,10 @@
 
 Canvas2
   xpub XPub
-  xSize Int64
-  ySize Int64
-  nextPathIndex Int64
+  xSize Word64
+  ySize Word64
+  asset Asset
+  nextPathIndex Word64
   createdAt UTCTime
   updatedAt UTCTime
 
@@ -15,7 +16,6 @@ LocaleRecord
   y Int64
   path DerivationPath
   address Text
-  asset Asset
   createdAt UTCTime
   updatedAt UTCTime
   Primary canvas2Id x y

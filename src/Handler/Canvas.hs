@@ -15,6 +15,7 @@ import Data.Singletons
 data InitCanvasGenerationReq = InitCanvasGenerationReq
   { xpub :: XPub
   , planeStock :: PlaneStock
+  , asset :: Asset
   } deriving (Eq, Show, Generic)
 
 instance FromJSON InitCanvasGenerationReq
@@ -38,5 +39,7 @@ initCanvasGenerationLogic :: CanvasGeneration r
   -> Effectful (Interpreter r) (Either String InitCanvasGenerationRes)
 initCanvasGenerationLogic InitCanvasGenerationReq{..} = do
   i <- interpret <$> ask
-  i $ withPlaneStock planeStock $ \plane -> insertCanvas2 xpub plane
-        $>> ( tshow >>> InitCanvasGenerationRes $>> fmap >>> fmap )
+  i $ withPlaneStock planeStock $ \plane ->
+    withSomeSing asset $ \sAsset ->
+      insertCanvas2 xpub sAsset plane
+            $>> ( tshow >>> InitCanvasGenerationRes $>> fmap >>> fmap )
