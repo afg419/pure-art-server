@@ -12,8 +12,8 @@ Canvas2
 
 LocaleRecord
   canvas2Id Canvas2Id
-  x Int64
-  y Int64
+  x Word64
+  y Word64
   path DerivationPath
   address Text
   createdAt UTCTime

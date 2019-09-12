@@ -9,23 +9,20 @@
 
 module PointGen.Plane where
 
-import Import hiding (Proxy)
+import Import
 import Data.Proxy
-import Data.Singletons
-import PointGen.Asset
-import Data.Maybe (fromJust)
 
+
+dimensions :: forall m n. Plane2 m n -> (Natural, Natural)
+dimensions P2 = (fromIntegral <<< natVal $ Proxy @m, fromIntegral <<< natVal $ Proxy @n)
+
+dimensions' :: forall m n s. (KnownNat m, KnownNat n) => s m n -> (Natural, Natural)
+dimensions' _ = (fromIntegral <<< natVal $ Proxy @m, fromIntegral <<< natVal $ Proxy @n)
 
 data Plane2 (m :: Nat) (n :: Nat) where
   P2 :: forall m n. (KnownNat m, KnownNat n) => Plane2 m n
 deriving instance Show (Plane2 m n)
 deriving instance Eq (Plane2 m n)
-
-plane2Dim :: forall m n. (KnownNat m, KnownNat n) => Plane2 m n -> (Integer, Integer)
-plane2Dim _ = (fromIntegral <<< natVal $ Proxy @m , fromIntegral <<< natVal $ Proxy @n)
-
-plane2Dim' :: forall m n s. (KnownNat m, KnownNat n) => s m n -> (Integer, Integer)
-plane2Dim' _ = (fromIntegral <<< natVal $ Proxy @m , fromIntegral <<< natVal $ Proxy @n)
 
 plane2For ::  forall m n s. (KnownNat m, KnownNat n) => s m n -> Plane2 m n
 plane2For _ = P2
@@ -49,15 +46,8 @@ withPlaneStock MediumStock wPlane = wPlane mediumPlane
 withPlaneStock LargeStock wPlane = wPlane largePlane
 withPlaneStock XLargeStock wPlane = wPlane xLargePlane
 
--- withDimensions :: (Integer, Integer) -> ( forall m n. (KnownNat m, KnownNat n) => Plane2 m n -> s ) -> Maybe s
--- withDimensions (i,j) f = case (someNatVal i, someNatVal j) of
---   (Just (SomeNat (Proxy :: Proxy m)), Just (SomeNat (Proxy :: Proxy n))) ->
---     (P2 :: Plane2 m n) $>> f >>> Just
---   _ -> Nothing
-
-leqDimensionsThan :: (KnownNat m1, KnownNat n1, KnownNat m2, KnownNat n2)
-  => Plane2 m1 n1 -> Plane2 m2 n2 -> Bool
+leqDimensionsThan :: Plane2 m1 n1 -> Plane2 m2 n2 -> Bool
 leqDimensionsThan p1 p2 = p1x <= p2x && p1y <= p2y
   where
-    (p1x, p1y) = plane2Dim p1
-    (p2x, p2y) = plane2Dim p2
+    (p1x, p1y) = dimensions p1
+    (p2x, p2y) = dimensions p2

@@ -7,14 +7,12 @@ import PointGen
 import Import hiding (print)
 import Data.Maybe
 
-
-
 prop_projectTo :: IO ()
 prop_projectTo = quickCheck $ do
   withRandomPlane (const True) $ \plane_up -> do
     withRandomPlane (`stockLeqThan` plane_up) $ \plane_down -> do
-      let (x_up_dim, y_up_dim) = plane2Dim plane_up
-      let (x_down_dim, y_down_dim) = plane2Dim plane_down
+      let (x_up_dim, y_up_dim) = dimensions plane_up
+      let (x_down_dim, y_down_dim) = dimensions plane_down
 
       let sw_up = fromJust $ mkCoordinate 0 0 plane_up
       let nw_up = fromJust $ mkCoordinate 0 (y_up_dim - 1) plane_up

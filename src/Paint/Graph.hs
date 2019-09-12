@@ -6,7 +6,7 @@
 
 module Paint.Graph where
 
-import Import hiding (elem, filter, map, head, find, group, sort, sum, sortOn)
+import Import hiding (elem, filter, map, find, group, sort, sum, sortOn)
 import Data.List hiding (last)
 import Data.Bifoldable
 import Data.Aeson

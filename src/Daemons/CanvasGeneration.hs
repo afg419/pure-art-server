@@ -2,14 +2,14 @@
 
 module Daemons.CanvasGeneration where
 
-import PointGen
-import Model
-import Effects.CanvasGeneration
-import Effects.Common
-import Paint.Painting
-import Data.Singletons
-import Data.List ((\\))
-import Import hiding (undefined, sum, filter, elem)
+-- import PointGen
+-- import Model
+-- import Effects.CanvasGeneration
+-- import Effects.Common
+-- import Paint.Painting
+-- import Data.Singletons
+-- import Data.List ((\\))
+-- import Import hiding (undefined, sum, filter, elem)
 
 data GenerateWholeCanvasRes = GenerateWholeCanvasRes { foundCoordinates :: Integer, totalCoordinates :: Integer } deriving (Eq, Show)
 
@@ -80,7 +80,7 @@ data GenerateWholeCanvasRes = GenerateWholeCanvasRes { foundCoordinates :: Integ
 --     (xs, ys) = plane2Dim targetPlane
 --     totalCoordinates = xs * ys
 --
--- 
+--
 -- data CoordinateHuntRes a m n = CoordinateHuntRes
 --   { foundTargetedLocales :: [SLocale a m n]
 --   , foundLocales :: [SLocale a m n]

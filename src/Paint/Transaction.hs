@@ -19,7 +19,7 @@ graphToTxScaffold hotV g = toTxScaffold initBranchCounter counterStarTrees
 mkScaffoldId :: Text -> TxScaffoldId v
 mkScaffoldId = TxScaffoldId <<< (`div` embarrasinglyLargeNumber) <<< hashIntoInteger
 
-newtype TxScaffoldId v = TxScaffoldId Integer
+newtype TxScaffoldId v = TxScaffoldId Natural
 instance Eq (TxScaffoldId v) where
   (TxScaffoldId v1) == (TxScaffoldId v2) = v1 == v2
 
@@ -68,5 +68,5 @@ toTxScaffold' input' (StarTree v sts) = (thisScaffold:nextScaffolds)
     toTxScaffoldPairs = uncurry toTxScaffold'
     nextScaffolds = theseInputs >>= toTxScaffoldPairs
 --
-embarrasinglyLargeNumber :: Integer
+embarrasinglyLargeNumber :: Natural
 embarrasinglyLargeNumber = 1000000000000000000000000000000000000000000000000

@@ -9,6 +9,9 @@ import qualified Basement.Types.Word256 as B
 import qualified Basement.Numerical.Number as B
 import Data.Maybe
 
+instance Arbitrary Natural where
+  arbitrary = fmap B.toNatural <<$ (arbitrary :: Gen Word64)
+
 stockLeqThan :: (KnownNat m, KnownNat n) => PlaneStock -> Plane2 m n -> Bool
 stockLeqThan ps targetPlane = withPlaneStock ps (`leqDimensionsThan` targetPlane)
 
@@ -48,12 +51,12 @@ genFibreCoordinate = do
   w64_3_x <- arbitrary
   w64_4_x <- arbitrary
 
-  let genx = B.toInteger $ B.Word256 w64_1_x w64_2_x w64_3_x w64_4_x
+  let genx = B.toNatural $ B.Word256 w64_1_x w64_2_x w64_3_x w64_4_x
 
   w64_1_y <- arbitrary
   w64_2_y <- arbitrary
   w64_3_y <- arbitrary
   w64_4_y <- arbitrary
 
-  let geny = B.toInteger $ B.Word256 w64_1_y w64_2_y w64_3_y w64_4_y
+  let geny = B.toNatural $ B.Word256 w64_1_y w64_2_y w64_3_y w64_4_y
   pure <<< fromJust $ mkCoordinate genx geny fibrePlane

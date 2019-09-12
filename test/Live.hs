@@ -3,15 +3,15 @@
 module Live where
 
 import PointGen
-import Import hiding (catMaybes, id)
-import Data.Maybe (fromJust, catMaybes)
-import Daemons.CanvasGeneration
-import Effects.Interpreters
-import Effects.Common
-import Effects.CanvasGeneration
+import Import
+import Data.Maybe (fromJust)
+-- import Daemons.CanvasGeneration
+-- import Effects.Interpreters
+-- import Effects.Common
+-- import Effects.CanvasGeneration
 import Model
 import Paint
-import Application
+-- import Application
 
 xpubT :: XPub
 xpubT = fromJust <<< parseXPub <<$ "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
@@ -24,9 +24,11 @@ getCanvas2AtCurrent = do
 coordinates :: [Coordinate2]
 coordinates = [(0,0), (50, 20), (200, 300)]
 
+edgesSafe :: Graph Coordinate2
 edgesSafe = Graph [Edge (0,0) (50,20), Edge (0,0) (3,4)]
+edgesUnsafe :: Graph Coordinate2
 edgesUnsafe = Graph [Edge (0,0) (50,20), Edge (0,0) (3,4), Edge (0,0) (200,400)]
---
+
 -- coordinateT :: KnownNats m n => Plane2 m n -> SCoordinate2 m n
 -- coordinateT p2 = SCoordinate2 { x = 0, y = 0, plane = p2 }
 --
