@@ -1,5 +1,6 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 module Paint.Transaction where
 
@@ -22,19 +23,39 @@ mkScaffoldId = TxScaffoldId <<< (`div` embarrasinglyLargeNumber) <<< hashToNatur
 newtype TxScaffoldId v = TxScaffoldId Natural
 instance Eq (TxScaffoldId v) where
   (TxScaffoldId v1) == (TxScaffoldId v2) = v1 == v2
+instance ToJSON (TxScaffoldId v) where
+  toJSON (TxScaffoldId n) = Number $ fromIntegral n
 
-instance Show v => Show (TxScaffoldId v) where
+instance Show (TxScaffoldId v) where
   show (TxScaffoldId v1) = show v1
-
 deriving instance Num (TxScaffoldId v)
+deriving instance (Functor TxScaffoldId)
+
 data TxScaffold v = TxScaffold { txid :: TxScaffoldId v, input :: InputScaffold v, outs :: [v] }
 deriving instance Show v => Show (TxScaffold v)
+deriving instance (Functor TxScaffold)
+instance ToJSON v => ToJSON (TxScaffold v) where
+  toJSON (TxScaffold txid' input' outs') = object
+    [ "txid" .= toJSON txid'
+    , "input" .= toJSON input'
+    , "outs" .= toJSON outs'
+    ]
+
 
 data InputScaffold v where
-  InputScaffold :: { prevId :: TxScaffoldId v, vout :: Integer, from :: v } -> InputScaffold v
+  InputScaffold :: { prevTxid :: TxScaffoldId v, vout :: Integer, from :: v } -> InputScaffold v
   InitInputScaffold :: v -> InputScaffold v
 deriving instance Eq v => Eq (InputScaffold v)
 deriving instance Show v => Show (InputScaffold v)
+deriving instance (Functor InputScaffold)
+
+instance ToJSON v => ToJSON (InputScaffold v) where
+  toJSON (InputScaffold prevTxid' vout' from') = object
+    [ "prevTxid" .= toJSON prevTxid'
+    , "vout" .= (Number $ fromIntegral vout')
+    , "from" .= toJSON from'
+    ]
+  toJSON (InitInputScaffold v) = object [ "from" .= toJSON v ]
 
 mkInputScaffolds :: TxScaffold v -> [InputScaffold v]
 mkInputScaffolds (TxScaffold txid' _ outs') = fmap toInput indexedOuts

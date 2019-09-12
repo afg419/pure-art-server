@@ -2,6 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module PointGen.AddressTransform where
 
@@ -63,6 +65,13 @@ data SLocale (a :: Asset) (m :: Nat) (n :: Nat) = SLocale
   , lAddress :: Address a
   , lPath :: DerivationPath
   } deriving (Show, Eq)
+
+instance ToJSON (SLocale a m n) where
+  toJSON SLocale{..} = object
+    [ "coordinate" .= array [cx lCoordinate, cy lCoordinate]
+    , "address" .= (String $ tshow lAddress)
+    , "path" .= (String $ tshow lPath)
+    ]
 
 data Locale = forall a m n. Locale (SLocale a m n)
 

@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Paint.Graph where
 
@@ -11,6 +12,7 @@ import Data.List hiding (last)
 import Data.Bifoldable
 import Data.Aeson
 import qualified Data.Vector as V
+import qualified Data.HashMap.Strict as HM
 
 data Edge v = Edge { eSrc :: v, eTgt :: v } deriving (Functor, Foldable, Traversable)
 deriving instance Show v => Show (Edge v)
@@ -136,6 +138,22 @@ branches (StarTree _ sts) = sts
 
 data BranchCounter v = BranchCounter { val :: v, subBranches :: Integer, subTrees :: Integer } | BranchInitCounter v
 deriving instance Show v => Show (BranchCounter v)
+deriving instance Functor BranchCounter
+instance ToJSON v => ToJSON (BranchCounter v) where
+  toJSON (BranchInitCounter v) = toJSON v
+  toJSON (BranchCounter val subBranches subTrees) = case toJSON val of
+    Object o -> Object $ appendCounterKeys o
+    _ -> object
+      [ "subTreeCount" .= subTreeJSON
+      , "subBranchCount" .= subBranchJSON
+      , "val" .= toJSON val]
+    where
+      subTreeJSON = Number $ fromIntegral subTrees
+      subBranchJSON = Number $ fromIntegral subBranches
+      appendCounterKeys hm =
+          HM.insert "subTreeCount" subTreeJSON
+        $ HM.insert "subBranchesCount" subBranchJSON
+        $ hm
 
 withBranchCounter :: StarTree v -> StarTree ( BranchCounter v )
 withBranchCounter (StarTree v []) = StarTree (BranchCounter v 0 0) []
