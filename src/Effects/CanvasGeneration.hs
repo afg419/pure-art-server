@@ -1,10 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PolyKinds #-}
 
 module Effects.CanvasGeneration where
 
@@ -19,17 +13,14 @@ import Import hiding (undefined)
 class Effect s => CanvasGeneration s where
   -- returns id of record, and 0/0 address
   insertCanvas2 :: CTY a m n -> XPub -> s (SCanvas2Id a m n)
-
   getCanvas2    :: Canvas2Id -> s (Maybe Canvas2)
 
   -- will return Left if Canvas2 does not conform to (CTY a m n) or if Id DNE
   sGetCanvas2    :: CTY a m n -> SCanvas2Id a m n -> s (Either Text (SCanvas2 a m n))
-
   updateCanvas2NextPathIndex :: Canvas2Id -> Integer -> s ()
 
   -- this uses a repsertMany so no duplicate coordinates stored
   insertPlane2Locales :: CTY a m n -> SCanvas2Id a m n -> [SLocale a m n] -> s ()
-
   getPlane2Locales :: CTY a m n -> SCanvas2Id a m n -> s [SLocale a m n]
 
 instance CanvasGeneration PsqlDB where

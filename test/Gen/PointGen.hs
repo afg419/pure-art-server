@@ -12,27 +12,22 @@ import Data.Maybe
 instance Arbitrary Natural where
   arbitrary = fmap B.toNatural <<$ (arbitrary :: Gen Word64)
 
-stockLeqThan :: (KnownNat m, KnownNat n) => PlaneStock -> Plane2 m n -> Bool
-stockLeqThan ps targetPlane = withPlaneStock ps (`leqDimensionsThan` targetPlane)
+stockLeqThan :: (Natural, Natural) -> Plane2 m n -> Bool
+stockLeqThan (x,y) targetPlane = withPlaneTy (x,y) (`leqDimensionsThan` targetPlane)
 
-instance Arbitrary PlaneStock where
-  arbitrary = arbitraryBoundedEnum
+withRandomPlane :: ((Natural, Natural) -> Bool) -> (forall m n. Plane2 m n -> Gen s) -> Gen s
+withRandomPlane xyHasProp s = do
+  (x, y) <- arbitrary `suchThat` xyHasProp
+  withPlaneTy (x, y) s
 
-withRandomPlane :: (PlaneStock -> Bool) -> (forall m n. KnownNats m n => Plane2 m n -> Gen s) -> Gen s
-withRandomPlane planeHasProperty s = do
-  stock <- arbitrary `suchThat` planeHasProperty
-  withPlaneStock stock s
+withRandomCoordinate :: (forall m n. SCoordinate2 m n -> Gen s) -> Gen s
+withRandomCoordinate s = withRandomPlane (const True) (genCoordinate >=> s)
 
-withRandomCoordinate :: (forall m n. KnownNats m n => SCoordinate2 m n -> Gen s) -> Gen s
-withRandomCoordinate s = do
-  stock <- arbitrary
-  withPlaneStock stock $ genCoordinate >=> s
-
-genCoordinate :: KnownNats m n => Plane2 m n -> Gen (SCoordinate2 m n)
+genCoordinate :: Plane2 m n -> Gen (SCoordinate2 m n)
 genCoordinate targetPlane = fmap (projectTo targetPlane) $ genFibreCoordinate
 
-genSubplaneCoordinate :: KnownNats m n => SubPlane2 m n -> Gen (SCoordinate2 m n)
-genSubplaneCoordinate sp = do
+genSubplaneCoordinate :: forall m n. SubPlane2 m n -> Gen (SCoordinate2 m n)
+genSubplaneCoordinate sp@(SubPlane2 (SCoordinate2 _ _) _) = do
   let (dimX, dimY) = subplane2Dim sp
   let (shiftX, shiftY) = subplane2Translate sp
 

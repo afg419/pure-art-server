@@ -43,7 +43,7 @@ canvasToCanvasTY Canvas2{..} =
   )
 
 
-data SCanvas2Id (a:: Asset) (m :: Nat) (n :: Nat) = SCanvas2Id { cid :: Canvas2Id }
+data SCanvas2Id (a:: Asset) (m :: Nat) (n :: Nat) = SCanvas2Id { sCanvas2Id :: Canvas2Id }
 
 instance Show (SCanvas2Id a m n) where
   show (SCanvas2Id s) = show s
@@ -59,14 +59,14 @@ newtype SLocaleId (a :: Asset) (m :: Nat) (n :: Nat) = SLocaleId LocaleRecordId
 toLocaleRecord :: forall a m n. SCanvas2Id a m n -> UTCTime -> SLocale a m n -> LocaleRecord
 toLocaleRecord (SCanvas2Id canvasId) now (SLocale {..}) = LocaleRecord canvasId rX rY lPath (tshow lAddress) now now
   where
-    rX = fromIntegral $ x lCoordinate
-    rY = fromIntegral $ y lCoordinate
+    rX = fromIntegral $ cx lCoordinate
+    rY = fromIntegral $ cy lCoordinate
 
 toLocaleRecordKey :: SCanvas2Id a m n -> SLocale a m n -> Key LocaleRecord
 toLocaleRecordKey (SCanvas2Id canvasId) (SLocale {..}) = LocaleRecordKey canvasId rX rY
   where
-    rX = fromIntegral $ x lCoordinate
-    rY = fromIntegral $ y lCoordinate
+    rX = fromIntegral $ cx lCoordinate
+    rY = fromIntegral $ cy lCoordinate
 
 fromLocaleRecord :: CTY a m n -> LocaleRecord -> Maybe (SLocale a m n)
 fromLocaleRecord cty LocaleRecord{..} = do

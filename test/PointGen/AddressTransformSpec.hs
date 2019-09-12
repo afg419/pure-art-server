@@ -7,6 +7,15 @@ import PointGen
 import Import hiding (print)
 import Data.Maybe
 
+smallPlane :: Plane2 10 10
+smallPlane = P2
+mediumPlane :: Plane2 100 100
+mediumPlane = P2
+largePlane :: Plane2 1000 1000
+largePlane = P2
+xLargePlane :: Plane2 10000 10000
+xLargePlane = P2
+
 prop_projectTo :: IO ()
 prop_projectTo = quickCheck $ do
   withRandomPlane (const True) $ \plane_up -> do

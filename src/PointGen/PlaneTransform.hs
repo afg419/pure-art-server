@@ -61,7 +61,7 @@ subplane2Translate :: SubPlane2 m n -> (Natural, Natural)
 subplane2Translate = (low <<< xRange) &&& (low <<< yRange)
 
 inSubPlane :: SCoordinate2 m n -> SubPlane2 m n -> Bool
-inSubPlane c sp = (x c) `inRange` (xRange sp) && (y c) `inRange` (yRange sp)
+inSubPlane c sp = (cx c) `inRange` (xRange sp) && (cy c) `inRange` (yRange sp)
 
 scaleToNewSegment :: Natural -> Natural -> Natural -> Natural
 scaleToNewSegment initialCount finalCount initialPoint =
