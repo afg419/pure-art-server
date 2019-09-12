@@ -1,12 +1,8 @@
 module Paint.TransactionSpec where
 
 import Test.QuickCheck
-import Test.QuickCheck.Assertions ((<=?))
-import Gen.PointGen
 import Gen.Paint
-import PointGen
-import Import hiding (print, length, from)
-import Data.Maybe
+import Import hiding (print, from)
 import Paint
 import Data.List ((\\))
 

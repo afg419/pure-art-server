@@ -10,11 +10,12 @@ import Effects.CanvasGeneration
 import Effects.Common
 import Effects.Interpreters
 import PointGen
-import Data.Singletons
 
 data InitCanvasGenerationReq = InitCanvasGenerationReq
   { xpub :: XPub
-  , planeStock :: PlaneStock
+  , xDim :: Natural
+  , yDim :: Natural
+  , asset :: Asset
   } deriving (Eq, Show, Generic)
 
 instance FromJSON InitCanvasGenerationReq
@@ -27,17 +28,13 @@ instance ToJSON InitCanvasGenerationRes
 postInitCanvasGenerationR :: Handler Value
 postInitCanvasGenerationR = do -- pure $ InitCanvasGenerationRes "" ""
   canvasGenReq <- requireCheckJsonBody
-  eRes <- runEffects (run @PsqlDB) $ initCanvasGenerationLogic canvasGenReq
-  case eRes of
-    Left _ -> throwString "fucked"
-    Right res -> pure $ toJSON res
+  fmap toJSON (runEffects (run @PsqlDB) <<$ initCanvasGenerationLogic canvasGenReq)
 
+-- TODO :: check that hotlocale is defined.
 initCanvasGenerationLogic :: CanvasGeneration r
   => InitCanvasGenerationReq
-  -> Effectful (Interpreter r) (Either String InitCanvasGenerationRes)
+  -> Effectful (Interpreter r) InitCanvasGenerationRes
 initCanvasGenerationLogic InitCanvasGenerationReq{..} = do
   i <- interpret <$> ask
-  i $ withPlaneStock planeStock $ \plane -> insertCanvas2 xpub plane
-        $>> ( tshow >>> InitCanvasGenerationRes
-              $>> fmap >>> fmap
-            )
+  i $ withCanvasTy (asset, xDim, yDim)
+    $ flip insertCanvas2 xpub >>> fmap tshow >>> fmap InitCanvasGenerationRes

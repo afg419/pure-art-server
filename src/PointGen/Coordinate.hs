@@ -1,46 +1,39 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module PointGen.Coordinate where
 
 import PointGen.Plane
 import Import
-import Data.Aeson
 
 type KnownNats m n = (KnownNat m, KnownNat n)
 
-data Coordinate2 (m :: Nat) (n :: Nat) where
-  Coordinate2 :: forall m n. KnownNats m n =>
-    { x :: Integer, y :: Integer, plane :: Plane2 m n } -> Coordinate2 m n
+type Coordinate2 = (Natural, Natural)
 
-instance KnownNats m n => FromJSON (Coordinate2 m n) where
-  parseJSON = withObject "coordinate 2" $ \o -> do
-    xCoordinate <- o .: "x"
-    yCoordinate <- o .: "y"
-    let p = P2
-    let (xSize, ySize) = plane2Dim p
-    if (0 > xCoordinate || xCoordinate > xSize) || (0 > yCoordinate || yCoordinate > ySize)
-      then fail "coordinate out of plane bounds"
-      else pure <<$ Coordinate2 xCoordinate yCoordinate p
+data SCoordinate2 (m :: Nat) (n :: Nat) where
+  SCoordinate2 :: KnownNats m n => { cx :: Natural, cy :: Natural } -> SCoordinate2 m n
 
-instance Show (Coordinate2 m n) where
-  show Coordinate2{..} = pack $ "(x:" <> show x <> " y:"<> show y <> " plane:" <> show xDim <> "," <> show yDim <> ")"
-    where
-      (xDim, yDim) = plane2Dim plane
-deriving instance Eq (Coordinate2 m n)
+instance Show (SCoordinate2 m n) where
+  show SCoordinate2{..} = pack $ "(x:" <> show cx <> ", y:"<> show cy <>")"
+deriving instance Eq (SCoordinate2 m n)
 
-instance Ord (Coordinate2 m n) where -- instance used for nubbing localeRecords in O(n*log(n)) time
-  Coordinate2 x1 y1 _ <= Coordinate2 x2 y2 _ =
+instance Ord (SCoordinate2 m n) where -- instance used for nubbing localeRecords in O(n*log(n)) time
+  SCoordinate2 x1 y1 <= SCoordinate2 x2 y2 =
     if x1 <= x2
       then y1 <= y2
       else False
 
-mkCoordinate :: forall m n. KnownNats m n => Integer -> Integer -> Plane2 m n -> Maybe (Coordinate2 m n)
-mkCoordinate x' y' c = if xValid && yValid
-  then Just $ Coordinate2 x' y' c
+l1Dist :: SCoordinate2 m n -> SCoordinate2 m n -> Natural
+l1Dist c1 c2 = abs (cx c1 - cx c2) + abs (cy c1 - cy c2)
+
+mkCoordinate :: forall m n. Natural -> Natural -> Plane2 m n -> Maybe (SCoordinate2 m n)
+mkCoordinate x' y' P2 = if xValid && yValid
+  then Just $ SCoordinate2 x' y'
   else Nothing
   where
-    (xSize, ySize) = plane2Dim c
-    xValid = 0 <= x' && x' <= xSize - 1
-    yValid = 0 <= y' && y' <= ySize - 1
+    (xSize, ySize) = dimensions (P2 @m @n)
+    xValid = 0 <= x' && x' <= xSize `minusNatural` 1
+    yValid = 0 <= y' && y' <= ySize `minusNatural` 1

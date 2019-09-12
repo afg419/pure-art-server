@@ -8,10 +8,18 @@ import PointGen
 import Paint.Graph
 import Import hiding (Vector, index)
 
-mkScaffoldId :: Text -> TxScaffoldId v
-mkScaffoldId = TxScaffoldId <<< (`div` embarrasinglyLargeNumber) <<< hashIntoInteger
+graphToTxScaffold :: (Show v, Eq v) => v -> Graph v -> [TxScaffold (BranchCounter v)]
+graphToTxScaffold hotV g = toTxScaffold initBranchCounter counterStarTrees
+  where
+    initBranchCounter = BranchInitCounter hotV
+    components = connectedComponents [] g
+    pointedComponents = fmap (id &&& (head <<< verticesG)) components
+    counterStarTrees = fmap (withBranchCounter <<< uncurry graphToStarTree) pointedComponents
 
-newtype TxScaffoldId v = TxScaffoldId Integer
+mkScaffoldId :: Text -> TxScaffoldId v
+mkScaffoldId = TxScaffoldId <<< (`div` embarrasinglyLargeNumber) <<< hashToNatural
+
+newtype TxScaffoldId v = TxScaffoldId Natural
 instance Eq (TxScaffoldId v) where
   (TxScaffoldId v1) == (TxScaffoldId v2) = v1 == v2
 
@@ -60,5 +68,5 @@ toTxScaffold' input' (StarTree v sts) = (thisScaffold:nextScaffolds)
     toTxScaffoldPairs = uncurry toTxScaffold'
     nextScaffolds = theseInputs >>= toTxScaffoldPairs
 --
-embarrasinglyLargeNumber :: Integer
+embarrasinglyLargeNumber :: Natural
 embarrasinglyLargeNumber = 1000000000000000000000000000000000000000000000000
