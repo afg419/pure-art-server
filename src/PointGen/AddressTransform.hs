@@ -44,15 +44,15 @@ textProject t = fromJust $ mkCoordinate xCoord yCoord P2
     xBase = pack "x" <> baseToHash
     yBase = pack "y" <> baseToHash
 
-    xCoord = hashIntoInteger xBase
-    yCoord = hashIntoInteger yBase
+    xCoord = hashToNatural xBase
+    yCoord = hashToNatural yBase
 
 words8sToNatural :: [Word8] -> Natural
 words8sToNatural [] = 0
 words8sToNatural (a:as) = fromIntegral a + 256 * words8sToNatural as
 
-hashIntoInteger :: Text -> Natural
-hashIntoInteger = words8sToNatural <<< BA.unpack <<< Crypto.hash256 <<< encodeUtf8
+hashToNatural :: Text -> Natural
+hashToNatural = words8sToNatural <<< BA.unpack <<< Crypto.hash256 <<< encodeUtf8
 
 --------------------------------------------------------------------------------
 -- SLocale's are geometric points with metadat about their derivation

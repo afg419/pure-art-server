@@ -17,7 +17,7 @@ graphToTxScaffold hotV g = toTxScaffold initBranchCounter counterStarTrees
     counterStarTrees = fmap (withBranchCounter <<< uncurry graphToStarTree) pointedComponents
 
 mkScaffoldId :: Text -> TxScaffoldId v
-mkScaffoldId = TxScaffoldId <<< (`div` embarrasinglyLargeNumber) <<< hashIntoInteger
+mkScaffoldId = TxScaffoldId <<< (`div` embarrasinglyLargeNumber) <<< hashToNatural
 
 newtype TxScaffoldId v = TxScaffoldId Natural
 instance Eq (TxScaffoldId v) where
