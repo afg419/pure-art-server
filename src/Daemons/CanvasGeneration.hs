@@ -11,36 +11,39 @@ import Data.Singletons
 import Data.List ((\\))
 import Import hiding (undefined, sum, filter, elem)
 
-data GenerateWholeCanvasRes = GenerateWholeCanvasRes { foundCoordinates :: Integer, totalCoordinates :: Integer } deriving (Eq, Show)
+data GenerateWholeCanvasRes = GenerateWholeCanvasRes { foundCoordinates :: Natural, totalCoordinates :: Natural } deriving (Eq, Show)
 
--- generateWholeCanvasLogic ::
---   forall r m n a. (CanvasGeneration r, KnownNats m n, SingI a)
---   => SAsset a
---   -> XPub
---   -> SCanvas2Id a m n
---   -> Integer
---   -> Effectful (Interpreter r) (Either String GenerateWholeCanvasRes)
--- generateWholeCanvasLogic sAsset xpub scid@(SCanvas2Id cid) totalTries = do
---   i <- interpret <$> ask
---   i $ do
---     -- TODO: check origin address for sufficient funds
---     mCanvas2 <- sGetCanvas2 scid
---     case mCanvas2 of
---       Nothing -> pure $ Left "Canvas not found."
---       Just (SCanvas2 (Canvas2{..})) -> do
---         let nextTry = fromIntegral canvas2NextPathIndex
---         let tries = [nextTry .. nextTry + totalTries - 1]
---         let locales = catMaybes <<< fmap (deriveLocale sAsset xpub targetPlane) $ (pathsForIndices tries)
---
---         insertPlane2Locales sAsset scid locales
---         updateCanvas2NextPathIndex scid (nextTry + totalTries)
---
---         found :: [SLocale a m n] <- getPlane2Locales cid
---         pure <<< Right $ GenerateWholeCanvasRes (fromIntegral <<< length <<$ found) totalCoordinates
---   where
---     targetPlane = canvas2Plane scid
---     (xs, ys) = plane2Dim targetPlane
---     totalCoordinates = xs * ys
+generateWholeCanvasLogic ::
+  forall r m n a. CanvasGeneration r
+  => CTY a m n
+  -> XPub
+  -> SCanvas2Id a m n
+  -> Integer
+  -> r (Either String GenerateWholeCanvasRes)
+generateWholeCanvasLogic cty scid@(SCanvas2Id cid) totalTries = do
+    -- TODO: check origin address for sufficient funds
+    mCanvas2 <- sGetCanvas2 scid
+    case mCanvas2 of
+      Nothing -> pure $ Left "Canvas not found."
+      Just (SCanvas2 (Canvas2{..})) -> do
+        let nextTry = fromIntegral canvas2NextPathIndex
+        let tries = [nextTry .. nextTry + totalTries - 1]
+        let locales = catMaybes <<< fmap (deriveLocale sAsset targetPlane) $ (pathsForIndices tries)
+
+        insertPlane2Locales sAsset scid locales
+        updateCanvas2NextPathIndex scid (nextTry + totalTries)
+
+        found :: [SLocale a m n] <- getPlane2Locales cid
+        pure <<< Right $ GenerateWholeCanvasRes (fromIntegral <<< length <<$ found) totalCoordinates
+  where
+    (xs, ys) = dimensionsCTY cty
+    totalCoordinates = xs * ys
+
+
+generateWholeCanvasLogic :: CanvasGeneration r => SCanvas2 a m n -> Natural -> r (Either Text GenerateWholeCanvasRes)
+generateWholeCanvasLogic (SCanvas2 (Canvas2 {..})) totalTries = do
+
+
 --
 -- data GeneratePaintingCanvasRes = GeneratePaintingCanvasRes
 --   { foundPaintingCoordinates :: Integer

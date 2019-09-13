@@ -50,8 +50,8 @@ data CTY (a :: Asset) (m :: Nat) (n :: Nat) where
     , dim :: Plane2 m n
     } -> CTY a m n
 
-dimensionCTY :: CTY a m n -> (Natural, Natural)
-dimensionCTY (CTY _ p) = dimensions p
+dimensionsCTY :: CTY a m n -> (Natural, Natural)
+dimensionsCTY (CTY _ p) = dimensions p
 
 withCanvasTy :: (Asset, Natural, Natural) -> (forall (a :: Asset) m n. CTY a m n -> r) -> r
 withCanvasTy (a, i, j) f = case (someAsset a, someNatVal i, someNatVal j) of

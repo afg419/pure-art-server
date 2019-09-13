@@ -21,9 +21,9 @@ prop_getDepth1 = quickCheck $ do
   let center = sSrc star
   let (StarTree (BranchCounter _ (Funds _ _ outps' txs')) sts) = withBranchCounter <<< graphToStarTree starGraph <<$ center
 
-  let firstAssert = outps' === (fromIntegral <<< length <<$ sts)
+  let firstAssert = outps' === 2 * (fromIntegral <<< length <<$ sts)
   let secondAssert = all (== 1) <<< fmap (outps <<< funds <<< stSrc) <<$ sts
-  let thirdAssert = txs' === 1
+  let thirdAssert = txs' === (fromIntegral <<< length <<$ sts) + 1
   pure $ firstAssert .&&. secondAssert .&&. thirdAssert
 
 prop_getsConnectedComponents1 :: IO ()
