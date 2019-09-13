@@ -59,3 +59,8 @@ rmdups :: Eq a => [a] -> [a]
 rmdups [] = []
 rmdups (x:xs)   | x `Prelude.elem` xs   = rmdups xs
                 | otherwise     = x : rmdups xs
+
+(.*) :: Monoid a => Natural -> a -> a
+n .* a = if n == 0
+  then mempty
+  else ((n - 1) .* a) <> a

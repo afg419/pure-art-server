@@ -2,14 +2,14 @@
 
 module Daemons.CanvasGeneration where
 
--- import PointGen
--- import Model
--- import Effects.CanvasGeneration
--- import Effects.Common
--- import Paint.Painting
--- import Data.Singletons
--- import Data.List ((\\))
--- import Import hiding (undefined, sum, filter, elem)
+import PointGen
+import Model
+import Effects.CanvasGeneration
+import Effects.Common
+import Paint.Painting
+import Data.Singletons
+import Data.List ((\\))
+import Import hiding (undefined, sum, filter, elem)
 
 data GenerateWholeCanvasRes = GenerateWholeCanvasRes { foundCoordinates :: Integer, totalCoordinates :: Integer } deriving (Eq, Show)
 
@@ -87,7 +87,7 @@ data GenerateWholeCanvasRes = GenerateWholeCanvasRes { foundCoordinates :: Integ
 --   , remainingTargetedCoordinates :: [SCoordinate2 m n]
 --   }
 --
--- multiCoordinateHunt :: KnownNats m n => XPub -> SAsset a -> [SCoordinate2 m n] -> Range Integer -> CoordinateHuntRes a m n
+-- multiCoordinateHunt :: XPub -> SAsset a -> [SCoordinate2 m n] -> Range Integer -> CoordinateHuntRes a m n
 -- multiCoordinateHunt xpub sAsset targetCoordinates (Range startIndex endIndex) =
 --   CoordinateHuntRes allFoundTargetedLocales allFoundLocales allRemainingTargetedCoordinates
 --   where
@@ -96,17 +96,19 @@ data GenerateWholeCanvasRes = GenerateWholeCanvasRes { foundCoordinates :: Integ
 --     allFoundTargetedLocales = filter ((`elem` targetCoordinates) <<< lCoordinate) allFoundLocales
 --     allRemainingTargetedCoordinates = targetCoordinates \\ fmap lCoordinate allFoundTargetedLocales
 --
--- -- On average for a fair n-sided dice it takes n * sum_k=1^n 1/k
--- estimateAttemptsNeededForEntireCanvas :: (KnownNats m n , Ord a, Floating a) => Plane2 m n -> Range a
--- estimateAttemptsNeededForEntireCanvas p = mkRange (diceSides * lowBoundSum) (diceSides * highBoundSum)
---   where
---     (m,n) = plane2Dim p
---     diceSides = realToFrac $ m * n
---     lowBoundSum = log (diceSides + 1)
---     highBoundSum = 1 + log(diceSides)
+
+-- On average for a fair n-sided dice it takes n * sum_k=1^n 1/k
+estimateAttemptsNeededForEntireCanvas :: (Ord a, Floating a) => Plane2 m n -> Range a
+estimateAttemptsNeededForEntireCanvas p = mkRange (diceSides * lowBoundSum) (diceSides * highBoundSum)
+  where
+    (m,n) = dimensions p
+    diceSides = realToFrac $ m * n
+    lowBoundSum = log (diceSides + 1)
+    highBoundSum = 1 + log(diceSides)
 --
--- estimateAttemptsNeeded2 :: KnownNats m n => Plane2 m n -> Double
--- estimateAttemptsNeeded2 p = fromRational $ (toRational diceSides) * (sum <<< fmap (\i -> 1/(toRational i)) $ [1..diceSides])
---   where
---     (m,n) = plane2Dim p
---     diceSides = m * n
+
+estimateAttemptsNeeded2 :: Plane2 m n -> Double
+estimateAttemptsNeeded2 p = fromRational $ (toRational diceSides) * (sum <<< fmap (\i -> 1/(toRational i)) $ [1..diceSides])
+  where
+    (m,n) = dimensions p
+    diceSides = m * n

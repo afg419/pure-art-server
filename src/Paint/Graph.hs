@@ -136,30 +136,61 @@ stSrc (StarTree v _) = v
 branches :: StarTree v -> [StarTree v]
 branches (StarTree _ sts) = sts
 
-data BranchCounter v = BranchCounter { val :: v, subBranches :: Integer, subTrees :: Integer } | BranchInitCounter v
+
+-- Fee of transactions = fee_in for 1 input + fee_out * total outputs.
+-- amount needed for tx = amount needed for each out + fee_in for 1 input + fee_out * total outputs.
+
+data Funds = Zero | Fin Natural | Outp Natural | Inp Natural | Plus Funds Funds
+instance Show Funds where
+  show (Fin n) = show n <> "F"
+  show (Outp n) = show n <> "O"
+  show (Inp n) = show n <> "I"
+  show (Plus a b) = show a <> " + " <> show b
+
+instance Semigroup Funds where
+  (Fin i) <> (Fin j) = Fin $ i + j
+  (Outp i) <> (Outp j) = Outp $ i + j
+  (Inp i) <> (Inp j) = Inp $ i + j
+  Zero <> a = a
+  a <> Zero = a
+  a <> b = Plus a b
+
+instance Eq Funds where
+  Fin i == Fin j = i == j
+  Outp i == Outp j = i == j
+  Inp i == Inp j = i == j
+  Zero == Zero = True
+  Plus a b = c ==
+  
+
+instance ToJSON Funds where
+  toJSON f = String $ tshow f
+
+instance Monoid Funds where
+  mempty = Zero
+
+data BranchCounter v = BranchCounter { node :: v, funds :: Funds }
 deriving instance Show v => Show (BranchCounter v)
 deriving instance Functor BranchCounter
 instance ToJSON v => ToJSON (BranchCounter v) where
-  toJSON (BranchInitCounter v) = toJSON v
-  toJSON (BranchCounter val subBranches subTrees) = case toJSON val of
+  toJSON (BranchCounter node funds) = case toJSON node of
     Object o -> Object $ appendCounterKeys o
     _ -> object
-      [ "subTreeCount" .= subTreeJSON
-      , "subBranchCount" .= subBranchJSON
-      , "val" .= toJSON val]
+      [ "funds" .= toJSON funds
+      , "node" .= toJSON node]
     where
-      subTreeJSON = Number $ fromIntegral subTrees
-      subBranchJSON = Number $ fromIntegral subBranches
-      appendCounterKeys hm =
-          HM.insert "subTreeCount" subTreeJSON
-        $ HM.insert "subBranchesCount" subBranchJSON
-        $ hm
+      appendCounterKeys hm = HM.insert "funds" (toJSON funds) <<$ hm
 
-withBranchCounter :: StarTree v -> StarTree ( BranchCounter v )
-withBranchCounter (StarTree v []) = StarTree (BranchCounter v 0 0) []
+withBranchCounter :: StarTree v -> StarTree (BranchCounter v)
+withBranchCounter (StarTree v []) = StarTree (BranchCounter v finalFunds) []
+  where
+    finalFunds = Inp 1 <> Fin 1
 withBranchCounter (StarTree v sts) = StarTree (BranchCounter v subBranchCount subTreeCount) nextIteration
   where
     nextIteration = fmap withBranchCounter sts
+    fundsForNextIteration = mconcat <> fmap funds nextIteration
+
+
     branchCount = fromIntegral <<$ length sts
     subBranchCount = branchCount + (sum <<< fmap (subBranches <<< stSrc) <<$ nextIteration)
     subTreeCount = 1 + (sum <<< fmap (subTrees <<< stSrc) <<$ nextIteration)
