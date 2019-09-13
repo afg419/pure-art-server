@@ -136,38 +136,26 @@ stSrc (StarTree v _) = v
 branches :: StarTree v -> [StarTree v]
 branches (StarTree _ sts) = sts
 
-
--- Fee of transactions = fee_in for 1 input + fee_out * total outputs.
--- amount needed for tx = amount needed for each out + fee_in for 1 input + fee_out * total outputs.
-
-data Funds = Zero | Fin Natural | Outp Natural | Inp Natural | Plus Funds Funds
+data Funds = Funds { fins :: Natural, inps :: Natural, outps :: Natural, txs :: Natural }
 instance Show Funds where
-  show (Fin n) = show n <> "F"
-  show (Outp n) = show n <> "O"
-  show (Inp n) = show n <> "I"
-  show (Plus a b) = show a <> " + " <> show b
-
-instance Semigroup Funds where
-  (Fin i) <> (Fin j) = Fin $ i + j
-  (Outp i) <> (Outp j) = Outp $ i + j
-  (Inp i) <> (Inp j) = Inp $ i + j
-  Zero <> a = a
-  a <> Zero = a
-  a <> b = Plus a b
-
-instance Eq Funds where
-  Fin i == Fin j = i == j
-  Outp i == Outp j = i == j
-  Inp i == Inp j = i == j
-  Zero == Zero = True
-  Plus a b = c ==
-  
+  show (Funds fins inps outps txs) =
+    show fins <> "F" <> " + " <>
+    show inps <> "I" <> " + " <>
+    show outps <> "O" <> " + " <>
+    show txs <> "TX"
 
 instance ToJSON Funds where
-  toJSON f = String $ tshow f
+  toJSON (Funds fins inps outps txs) = object
+    [ "finCount" .= fins
+    , "inputCount" .= inps
+    , "outputCount" .= outps
+    , "txCount" .= txs
+    ]
 
+instance Semigroup Funds where
+  Funds a1 a2 a3 a4 <> Funds b1 b2 b3 b4 = Funds (a1 + b1) (a2 + b2) (a3 + b3) (a4 + b4)
 instance Monoid Funds where
-  mempty = Zero
+  mempty = Funds 0 0 0 0
 
 data BranchCounter v = BranchCounter { node :: v, funds :: Funds }
 deriving instance Show v => Show (BranchCounter v)
@@ -181,19 +169,18 @@ instance ToJSON v => ToJSON (BranchCounter v) where
     where
       appendCounterKeys hm = HM.insert "funds" (toJSON funds) <<$ hm
 
+branchCounterLeaf :: v -> BranchCounter v
+branchCounterLeaf v = BranchCounter v (Funds 1 1 1 1)
+
 withBranchCounter :: StarTree v -> StarTree (BranchCounter v)
 withBranchCounter (StarTree v []) = StarTree (BranchCounter v finalFunds) []
   where
-    finalFunds = Inp 1 <> Fin 1
-withBranchCounter (StarTree v sts) = StarTree (BranchCounter v subBranchCount subTreeCount) nextIteration
+    finalFunds = Funds 1 1 1 1 -- this is a leaf of the tree, fin for amount to send home beyond fees, the rest for a tx
+withBranchCounter (StarTree v sts) = StarTree (BranchCounter v fundsForThis) nextIteration
   where
     nextIteration = fmap withBranchCounter sts
-    fundsForNextIteration = mconcat <> fmap funds nextIteration
-
-
-    branchCount = fromIntegral <<$ length sts
-    subBranchCount = branchCount + (sum <<< fmap (subBranches <<< stSrc) <<$ nextIteration)
-    subTreeCount = 1 + (sum <<< fmap (subTrees <<< stSrc) <<$ nextIteration)
+    fundsForNextIteration = mconcat <<$ fmap (\(StarTree vNext _) -> funds vNext) nextIteration
+    fundsForThis = fundsForNextIteration <> Funds 0 1 (fromIntegral <<$ length sts) 1
 
 -- a disconnected graph will only return star tree for component containing v
 graphToStarTree :: (Show v, Eq v)  => Graph v -> v -> StarTree v

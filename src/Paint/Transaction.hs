@@ -12,7 +12,7 @@ import Import hiding (Vector, index)
 graphToTxScaffold :: (Show v, Eq v) => v -> Graph v -> [TxScaffold (BranchCounter v)]
 graphToTxScaffold hotV g = toTxScaffold initBranchCounter counterStarTrees
   where
-    initBranchCounter = BranchInitCounter hotV
+    initBranchCounter = branchCounterLeaf hotV
     components = connectedComponents [] g
     pointedComponents = fmap (id &&& (head <<< verticesG)) components
     counterStarTrees = fmap (withBranchCounter <<< uncurry graphToStarTree) pointedComponents
