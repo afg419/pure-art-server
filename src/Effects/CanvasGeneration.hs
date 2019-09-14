@@ -35,7 +35,6 @@ instance CanvasGeneration PsqlDB where
           (fromIntegral xSize)
           (fromIntegral ySize)
           (fromSing <<< sAsset <<$ cty)
-          0
           now
           now
   getCanvas2 cId = PsqlDB <<< get $ cId

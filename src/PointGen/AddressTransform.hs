@@ -57,7 +57,7 @@ hashToNatural :: Text -> Natural
 hashToNatural = words8sToNatural <<< BA.unpack <<< Crypto.hash256 <<< encodeUtf8
 
 --------------------------------------------------------------------------------
--- SLocale's are geometric points with metadat about their derivation
+-- SLocale's are geometric points with metadata about their derivation
 --------------------------------------------------------------------------------
 
 data SLocale (a :: Asset) (m :: Nat) (n :: Nat) = SLocale

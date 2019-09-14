@@ -42,7 +42,6 @@ canvasToCanvasTY Canvas2{..} =
   , fromIntegral canvas2YSize
   )
 
-
 data SCanvas2Id (a:: Asset) (m :: Nat) (n :: Nat) = SCanvas2Id { sCanvas2Id :: Canvas2Id }
 
 instance Show (SCanvas2Id a m n) where
@@ -57,7 +56,7 @@ instance Show SomeCanvasId where
 newtype SLocaleId (a :: Asset) (m :: Nat) (n :: Nat) = SLocaleId LocaleRecordId
 
 toLocaleRecord :: forall a m n. SCanvas2Id a m n -> UTCTime -> SLocale a m n -> LocaleRecord
-toLocaleRecord (SCanvas2Id canvasId) now (SLocale {..}) = LocaleRecord canvasId rX rY lPath (tshow lAddress) now now
+toLocaleRecord (SCanvas2Id canvasId) now (SLocale {..}) = LocaleRecord canvasId undefined rX rY (tshow lAddress) now now
   where
     rX = fromIntegral $ cx lCoordinate
     rY = fromIntegral $ cy lCoordinate
@@ -68,9 +67,9 @@ toLocaleRecordKey (SCanvas2Id canvasId) (SLocale {..}) = LocaleRecordKey canvasI
     rX = fromIntegral $ cx lCoordinate
     rY = fromIntegral $ cy lCoordinate
 
-fromLocaleRecord :: CTY a m n -> LocaleRecord -> Maybe (SLocale a m n)
-fromLocaleRecord cty LocaleRecord{..} = do
+fromLocaleRecord :: CTY a m n -> (LocaleRecord, PublicKeyRecord) -> Maybe (SLocale a m n)
+fromLocaleRecord cty (LocaleRecord{..}, PublicKeyRecord{..}) = do
   coordinate <- mkCoordinate (fromIntegral localeRecordX) (fromIntegral localeRecordY) (dim cty)
-  pure $ SLocale coordinate address localeRecordPath
+  pure $ SLocale coordinate address publicKeyRecordPath
   where
     address = fromJust <<< mkAddress (sAsset cty) $ localeRecordAddress
