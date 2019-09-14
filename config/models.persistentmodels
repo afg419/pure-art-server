@@ -11,6 +11,8 @@ PublicKeyRecord
   publicKeyGeneratorId PublicKeyGeneratorId
   publicKey Text
   path DerivationPath
+  createdAt UTCTime
+  updatedAt UTCTime
 
 Canvas2
   publicKeyGeneratorId
