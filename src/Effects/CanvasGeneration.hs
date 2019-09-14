@@ -15,7 +15,7 @@ class Effect s => CanvasGeneration s where
   insertPublicKeyGenerator :: XPub -> s PublicKeyGeneratorId
   getPublicKeyGenerator    :: PublicKeyGeneratorId -> s (Maybe PublicKeyGenerator)
 
-  updateGeneratorIndex :: PublicKeyGenerator -> Natural -> s ()
+  updateGeneratorIndex :: PublicKeyGeneratorId -> Natural -> s ()
 
   -- this uses a repsertMany so no duplicate coordinates stored
   insertPublicKeys :: PublicKeyGeneratorId -> [(PublicKey, DerivationPath)] -> s ()
@@ -26,14 +26,13 @@ instance CanvasGeneration PsqlDB where
     now <- liftIO getCurrentTime
     PsqlDB <<< insert <<$ PublicKeyGenerator xpub 0 now now
   getPublicKeyGenerator pkgenId = PsqlDB <<< get $ pkgenId
-  updateGeneratorIndex pkgenId nextIndex = [PublicKeyGeneratorPathIndex =. (fromIntegral nextIndex)]
+  updateGeneratorIndex pkgenId nextIndex = [PublicKeyGeneratorNextPathIndex =. (fromIntegral nextIndex)]
     $>> update pkgenId
     >>> PsqlDB
   insertPublicKeys pkgenId pks = do
     now <- liftIO getCurrentTime
+    let toPublicKeyRecord (pk, dp) = (PublicKeyRecordId pkgenId dp, PublicKeyRecord pkgenId pk dp now now)
     PsqlDB <<< repsertMany <<$ fmap toPublicKeyRecord pks
-      where
-        toPublicKeyRecord (pk, dp) = PublicKeyRecord pkgenId pk dp now now
   getPlane2Locales cty pkgenId =
     selectList [ LocaleRecordCanvas2Id ==. cid] []
     $>> fmap (fmap $ entityVal >>> fromLocaleRecord cty)

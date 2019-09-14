@@ -13,21 +13,4 @@ PublicKeyRecord
   path DerivationPath
   createdAt UTCTime
   updatedAt UTCTime
-
-Canvas2
-  publicKeyGeneratorId
-  xSize Word64
-  ySize Word64
-  asset Asset
-  createdAt UTCTime
-  updatedAt UTCTime
-
-LocaleRecord
-  canvas2Id Canvas2Id
-  publicKeyRecordId PublicKeyRecordId
-  x Word64
-  y Word64
-  address Text
-  createdAt UTCTime
-  updatedAt UTCTime
-  Primary canvas2Id x y
+  Primary publicKeyGeneratorId path

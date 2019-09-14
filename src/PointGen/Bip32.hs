@@ -27,6 +27,11 @@ hotAddress sa x = deriveAddress sa x hotPath $>> fromJust
 --------------------------------------------------------------------------------
 
 newtype XPub = XPub {runXPub :: Crypto.XPub}
+newtype PublicKey = PublicKey {runPubKey :: Crypto.PublicKey}
+
+xpubToPub :: XPub -> PublicKey
+xpubToPub = runXPub >>> Crypto._extKey >>> PublicKey
+
 deriving instance Show XPub
 deriving instance Eq XPub
 
@@ -51,7 +56,21 @@ parseXPub = fmap XPub <<< Crypto.fromXAddress
 -- Derivation Paths
 --------------------------------------------------------------------------------
 
-newtype DerivationPath = DerivationPath Crypto.Path deriving Eq
+newtype DerivationPath = DerivationPath Crypto.Path deriving (Eq)
+
+instance ToJSON DerivationPath where
+  toJSON p = String $ tshow p
+
+instance FromJSON DerivationPath where
+  parseJSON = withText "derivation path" $ \text -> pure $ read (unpack $ debug "the fuck" text)
+
+instance Ord DerivationPath where
+  p1 < p2 = unPath p1 < unPath p2
+
+instance Read DerivationPath where
+  readsPrec _ ('m':'/':s) = debug "uh is this right?" (fmap (mkPath *** id) ((readsPrec 0 s) :: [([Natural], String)]))
+  readsPrec _ s = []
+
 instance Show DerivationPath where
   show (DerivationPath d) = show d
 
@@ -66,10 +85,13 @@ instance PersistField DerivationPath where
 instance PersistFieldSql DerivationPath where
   sqlType _ = SqlString
 
-mkPath :: [Integer] -> DerivationPath
+mkPath :: [Natural] -> DerivationPath
 mkPath is = DerivationPath <<< Crypto.Path <<< fmap (Crypto.Index <<< fromIntegral) $ is
 
-pathsForIndices :: [Integer] -> [DerivationPath]
+unPath :: DerivationPath -> [Natural]
+unPath (DerivationPath (Crypto.Path p)) = fmap (fromIntegral <<< Crypto.getIndex) p
+
+pathsForIndices :: [Natural] -> [DerivationPath]
 pathsForIndices = fmap (mkPath <<< (0:) <<< pure)
 
 deriveXPub :: XPub -> DerivationPath -> Maybe XPub
