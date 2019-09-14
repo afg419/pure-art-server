@@ -4,3 +4,4 @@
 -- /register RegisterXPubR POST
 /canvas/new InitCanvasGenerationR POST
 -- /paint/new InitPaintR POST
+/paint/scaffold ScaffoldPaintR POST

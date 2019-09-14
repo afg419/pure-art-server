@@ -1,13 +1,13 @@
 module Paint.PaintingTransform where
 
-import PointGen
-import Import hiding ((\\))
-import Paint.Graph
-import Paint.Transaction
-import Paint.Painting
-import Data.List ((\\))
+-- import PointGen
+-- import Import
+-- import Paint.Graph
+-- import Paint.Transaction
+-- import Paint.Painting
+-- import Data.List ((\\))
 
-                                             
+
 -- paintingTransform :: Painting2 a m n -> TxPainting a m n
 -- paintingTransform p = _
 --   where

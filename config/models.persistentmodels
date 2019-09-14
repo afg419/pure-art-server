@@ -1,20 +1,30 @@
 -- By default this file is used by `persistFileWith` in Model.hs (which is imported by Foundation.hs)
 -- Syntax for this file here: https://github.com/yesodweb/persistent/blob/master/docs/Persistent-entity-syntax.md
 
+PublicKeyGenerator
+  xpub XPub
+  nextPathIndex Word64
+  createdAt UTCTime
+  updatedAt UTCTime
+
+PublicKeyRecord
+  GeneratorId AddressGeneratorId
+  address Text
+
+
 Canvas2
   xpub XPub
+  xSize Word64
+  ySize Word64
   asset Asset
-  xSize Int64
-  ySize Int64
-  originAddress Text
-  nextPathIndex Int64
+  nextPathIndex Word64
   createdAt UTCTime
   updatedAt UTCTime
 
 LocaleRecord
   canvas2Id Canvas2Id
-  x Int64
-  y Int64
+  x Word64
+  y Word64
   path DerivationPath
   address Text
   createdAt UTCTime
