@@ -2,15 +2,15 @@
 
 module Live where
 
-import PointGen
-import Import
-import Data.Maybe (fromJust)
--- import Daemons.CanvasGeneration
--- import Effects.Interpreters
--- import Effects.Common
--- import Effects.CanvasGeneration
-import Model
-import Paint
+-- import PointGen
+-- import Import
+-- import Data.Maybe (fromJust)
+-- -- import Daemons.CanvasGeneration
+-- -- import Effects.Interpreters
+-- -- import Effects.Common
+-- -- import Effects.CanvasGeneration
+-- import Model
+-- import Paint
 -- import Application
 
 -- xpubT :: XPub

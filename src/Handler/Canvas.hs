@@ -11,30 +11,28 @@ import Effects.Common
 import Effects.Interpreters
 import PointGen
 
-data InitCanvasGenerationReq = InitCanvasGenerationReq
+data CreatePubkeyGeneratorReq = CreatePubkeyGeneratorReq
   { xpub :: XPub
-  , xDim :: Natural
-  , yDim :: Natural
-  , asset :: Asset
   } deriving (Eq, Show, Generic)
 
-instance FromJSON InitCanvasGenerationReq
+instance FromJSON CreatePubkeyGeneratorReq
 
-data InitCanvasGenerationRes = InitCanvasGenerationRes
-  { canvasId :: Text } deriving (Eq, Show, Generic)
+data CreatePubkeyGeneratorRes = CreatePubkeyGeneratorRes
+  { publicKeyGeneratorId :: Text } deriving (Eq, Show, Generic)
 
-instance ToJSON InitCanvasGenerationRes
+instance ToJSON CreatePubkeyGeneratorRes
 
-postInitCanvasGenerationR :: Handler Value
-postInitCanvasGenerationR = do -- pure $ InitCanvasGenerationRes "" ""
+postCreatePubkeyGeneratorR :: Handler Value
+postCreatePubkeyGeneratorR = do -- pure $ CreatePubkeyGeneratorRes "" ""
   canvasGenReq <- requireCheckJsonBody
   fmap toJSON (runEffects (run @PsqlDB) <<$ initCanvasGenerationLogic canvasGenReq)
 
 -- TODO :: check that hotlocale is defined.
 initCanvasGenerationLogic :: CanvasGeneration r
-  => InitCanvasGenerationReq
-  -> Effectful (Interpreter r) InitCanvasGenerationRes
-initCanvasGenerationLogic InitCanvasGenerationReq{..} = do
+  => CreatePubkeyGeneratorReq
+  -> Effectful (Interpreter r) CreatePubkeyGeneratorRes
+initCanvasGenerationLogic CreatePubkeyGeneratorReq{..} = do
   i <- interpret <$> ask
-  i $ withCanvasTy (asset, xDim, yDim)
-    $ flip insertCanvas2 xpub >>> fmap tshow >>> fmap InitCanvasGenerationRes
+  i $ do
+    genId <- insertPublicKeyGenerator xpub
+    pure <<< CreatePubkeyGeneratorRes <<$ tshow genId

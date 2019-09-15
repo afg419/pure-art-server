@@ -12,12 +12,20 @@ import Import hiding (get)
 import Data.Aeson
 import Database.Persist.Sql
 import Data.Maybe (fromJust)
+import qualified Data.Serialize as S
 
 deriveAddress :: SAsset a -> XPub -> DerivationPath -> Maybe (Address a)
-deriveAddress SDOGE xpub dpath =
-  fmap
-  (DogeA <<< Crypto.getDogeP2PKHAddress Crypto.MainNet <<< Crypto._extKey <<< runXPub)
-  $ deriveXPub xpub dpath
+deriveAddress sa xpub dpath = fmap (mkAddress sa) mpub
+  where
+    mpub = fmap xpubToPub <<$ deriveXPub xpub dpath
+
+mkPublicKey :: XPub -> DerivationPath -> Maybe PublicKey
+mkPublicKey xpub dpath = fmap xpubToPub <<$ deriveXPub xpub dpath
+
+mkAddress :: SAsset a -> PublicKey -> Address a
+mkAddress SDOGE pk =
+  (DogeA <<< Crypto.getDogeP2PKHAddress Crypto.MainNet <<< runPubKey)
+  $ pk
 
 hotAddress :: SAsset a -> XPub -> Address a
 hotAddress sa x = deriveAddress sa x hotPath $>> fromJust
@@ -27,7 +35,18 @@ hotAddress sa x = deriveAddress sa x hotPath $>> fromJust
 --------------------------------------------------------------------------------
 
 newtype XPub = XPub {runXPub :: Crypto.XPub}
-newtype PublicKey = PublicKey {runPubKey :: Crypto.PublicKey}
+newtype PublicKey = PublicKey {runPubKey :: Crypto.PublicKey} deriving (Eq)
+instance Show PublicKey where
+  show = show <<< runPubKey
+instance PersistField PublicKey where
+  toPersistValue = PersistText <<< decodeUtf8 <<< Crypto.getCompressed <<< runPubKey
+  fromPersistValue (PersistText t) = maybe (Left "Invalid PublicKey") Right <<< parsePublicKey <<< encodeUtf8 $ t
+  fromPersistValue m = Left $ pack $ "Expected PublicKey saved as text " <> show m
+instance PersistFieldSql PublicKey where
+  sqlType _ = SqlString
+
+parsePublicKey :: ByteString -> Maybe PublicKey
+parsePublicKey = fmap PublicKey <<< eToM <<< S.decode
 
 xpubToPub :: XPub -> PublicKey
 xpubToPub = runXPub >>> Crypto._extKey >>> PublicKey
@@ -65,11 +84,11 @@ instance FromJSON DerivationPath where
   parseJSON = withText "derivation path" $ \text -> pure $ read (unpack $ debug "the fuck" text)
 
 instance Ord DerivationPath where
-  p1 < p2 = unPath p1 < unPath p2
+  p1 <= p2 = unPath p1 <= unPath p2
 
 instance Read DerivationPath where
   readsPrec _ ('m':'/':s) = debug "uh is this right?" (fmap (mkPath *** id) ((readsPrec 0 s) :: [([Natural], String)]))
-  readsPrec _ s = []
+  readsPrec _ _ = []
 
 instance Show DerivationPath where
   show (DerivationPath d) = show d

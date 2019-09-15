@@ -7,34 +7,33 @@ import Model
 import Effects.Common
 import Effects.Interpreters
 import Database.Persist
-import Data.Singletons
 import Import hiding (undefined)
 
 class Effect s => CanvasGeneration s where
-  -- returns id of record, and 0/0 address
   insertPublicKeyGenerator :: XPub -> s PublicKeyGeneratorId
-  getPublicKeyGenerator    :: PublicKeyGeneratorId -> s (Maybe PublicKeyGenerator)
-
+  getPublicKeyGenerator    :: XPub -> s (Maybe (Entity PublicKeyGenerator))
+  getPublicKeyGeneratorId    :: XPub -> s (Maybe PublicKeyGeneratorId)
   updateGeneratorIndex :: PublicKeyGeneratorId -> Natural -> s ()
-
-  -- this uses a repsertMany so no duplicate coordinates stored
   insertPublicKeys :: PublicKeyGeneratorId -> [(PublicKey, DerivationPath)] -> s ()
-  getPlane2Locales :: CTY a m n -> PublicKeyGeneratorId -> s [SLocale a m n]
+  getPublicKeys :: PublicKeyGeneratorId -> s [PublicKeyRecord]
 
 instance CanvasGeneration PsqlDB where
   insertPublicKeyGenerator xpub = do
     now <- liftIO getCurrentTime
     PsqlDB <<< insert <<$ PublicKeyGenerator xpub 0 now now
-  getPublicKeyGenerator pkgenId = PsqlDB <<< get $ pkgenId
+  getPublicKeyGenerator xpub = selectFirst [ PublicKeyGeneratorXpub ==. xpub] []
+    $>> PsqlDB
+  getPublicKeyGeneratorId xpub = selectFirst [ PublicKeyGeneratorXpub ==. xpub] []
+    $>> fmap (fmap entityKey)
+    >>> PsqlDB
   updateGeneratorIndex pkgenId nextIndex = [PublicKeyGeneratorNextPathIndex =. (fromIntegral nextIndex)]
     $>> update pkgenId
     >>> PsqlDB
   insertPublicKeys pkgenId pks = do
     now <- liftIO getCurrentTime
-    let toPublicKeyRecord (pk, dp) = (PublicKeyRecordId pkgenId dp, PublicKeyRecord pkgenId pk dp now now)
+    let toPublicKeyRecord (pk, dp) = (PublicKeyRecordKey pkgenId dp, PublicKeyRecord pkgenId pk dp now now)
     PsqlDB <<< repsertMany <<$ fmap toPublicKeyRecord pks
-  getPlane2Locales cty pkgenId =
-    selectList [ LocaleRecordCanvas2Id ==. cid] []
-    $>> fmap (fmap $ entityVal >>> fromLocaleRecord cty)
+  getPublicKeys pkgenId =
+    selectList [ PublicKeyRecordPublicKeyGeneratorId ==. pkgenId] []
+    $>> fmap (fmap entityVal)
     >>> PsqlDB
-    >>> fmap catMaybes
