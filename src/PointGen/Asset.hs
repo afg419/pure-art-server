@@ -43,17 +43,21 @@ instance PersistField Asset where
 instance PersistFieldSql Asset where
   sqlType _ = SqlString
 
+data CTY = CTY Asset Natural Natural
 
-data CTY (a :: Asset) (m :: Nat) (n :: Nat) where
-  CTY :: (KnownNat m, KnownNat n) =>
+data SCTY (a :: Asset) (m :: Nat) (n :: Nat) where
+  SCTY :: (KnownNat m, KnownNat n) =>
     { sAsset :: SAsset a
     , dim :: Plane2 m n
-    } -> CTY a m n
+    } -> SCTY a m n
 
-dimensionsCTY :: CTY a m n -> (Natural, Natural)
-dimensionsCTY (CTY _ p) = dimensions p
+dimensionsSCTY :: SCTY a m n -> (Natural, Natural)
+dimensionsSCTY (SCTY _ p) = dimensions p
 
-withCanvasTy :: (Asset, Natural, Natural) -> (forall (a :: Asset) m n. CTY a m n -> r) -> r
-withCanvasTy (a, i, j) f = case (someAsset a, someNatVal i, someNatVal j) of
+dimensionsCTY :: CTY -> (Natural, Natural)
+dimensionsCTY (CTY _ m n) = (m,n)
+
+withCanvasTy :: CTY -> (forall (a :: Asset) m n. SCTY a m n -> r) -> r
+withCanvasTy (CTY a i j) f = case (someAsset a, someNatVal i, someNatVal j) of
   (SomeSing (s :: SAsset a), SomeNat (Proxy :: Proxy m), SomeNat (Proxy :: Proxy n)) ->
-    f $ CTY s (P2 @m @n)
+    f $ SCTY s (P2 @m @n)

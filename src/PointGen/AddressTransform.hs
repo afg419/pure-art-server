@@ -19,7 +19,7 @@ import Data.Maybe
 import Import
 import Data.Proxy
 
-hotLocale :: CTY a m n -> XPub -> SLocale a m n
+hotLocale :: SCTY a m n -> XPub -> SLocale a m n
 hotLocale cty xpub = deriveLocale cty xpub hotPath $>> fromJust
 
 --------------------------------------------------------------------------------
@@ -57,26 +57,27 @@ hashToNatural :: Text -> Natural
 hashToNatural = words8sToNatural <<< BA.unpack <<< Crypto.hash256 <<< encodeUtf8
 
 --------------------------------------------------------------------------------
--- SLocale's are geometric points with metadat about their derivation
+-- SLocale's are geometric points with metadata about their derivation
 --------------------------------------------------------------------------------
 
 data SLocale (a :: Asset) (m :: Nat) (n :: Nat) = SLocale
   { lCoordinate :: SCoordinate2 m n
   , lAddress :: Address a
-  , lPath :: DerivationPath
   } deriving (Show, Eq)
 
 instance ToJSON (SLocale a m n) where
   toJSON SLocale{..} = object
     [ "coordinate" .= array [cx lCoordinate, cy lCoordinate]
     , "address" .= (String $ tshow lAddress)
-    , "path" .= (String $ tshow lPath)
     ]
 
 data Locale = forall a m n. Locale (SLocale a m n)
 
-deriveLocale :: CTY a m n -> XPub -> DerivationPath -> Maybe (SLocale a m n)
+deriveLocale :: SCTY a m n -> XPub -> DerivationPath -> Maybe (SLocale a m n)
 deriveLocale cty xpub dpath = scaleLocale (dim cty) <$> deriveFibreLocale (sAsset cty) xpub dpath
+
+mkLocale :: SCTY a m n -> PublicKey -> SLocale a m n
+mkLocale scty pk = scaleLocale (dim scty) <<$ mkFibreLocale (sAsset scty) pk
 
 type FibreLocale a = SLocale a MaxHashSize MaxHashSize
 
@@ -84,7 +85,13 @@ deriveFibreLocale :: SAsset a -> XPub -> DerivationPath -> Maybe (FibreLocale a)
 deriveFibreLocale sa xpub dpath = do
   address <- deriveAddress sa xpub dpath
   let coordinate = addressTransform address
-  pure $ SLocale coordinate address dpath
+  pure $ SLocale coordinate address
+
+mkFibreLocale :: SAsset a -> PublicKey -> FibreLocale a
+mkFibreLocale sa pk = SLocale coord addr
+  where
+    addr = mkAddress sa pk
+    coord = addressTransform addr
 
 scaleLocale :: Plane2 m2 n2 -> SLocale a m1 n1 -> SLocale a m2 n2
 scaleLocale p2 locale = locale{ lCoordinate = scaledCoordinate }

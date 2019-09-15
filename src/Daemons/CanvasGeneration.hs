@@ -5,44 +5,47 @@ module Daemons.CanvasGeneration where
 import PointGen
 import Model
 import Effects.CanvasGeneration
-import Effects.Common
-import Paint.Painting
-import Data.Singletons
-import Data.List ((\\))
 import Import hiding (undefined, sum, filter, elem)
 
-data GenerateWholeCanvasRes = GenerateWholeCanvasRes { foundCoordinates :: Natural, totalCoordinates :: Natural } deriving (Eq, Show)
+data GeneratePubKeysRes = GeneratePubKeysRes
+  { totalAddresses :: Natural
+  } deriving (Eq, Show)
 
-generateWholeCanvasLogic ::
-  forall r m n a. CanvasGeneration r
-  => CTY a m n
-  -> XPub
-  -> SCanvas2Id a m n
-  -> Integer
-  -> r (Either String GenerateWholeCanvasRes)
-generateWholeCanvasLogic cty scid@(SCanvas2Id cid) totalTries = do
-    -- TODO: check origin address for sufficient funds
-    mCanvas2 <- sGetCanvas2 scid
-    case mCanvas2 of
-      Nothing -> pure $ Left "Canvas not found."
-      Just (SCanvas2 (Canvas2{..})) -> do
-        let nextTry = fromIntegral canvas2NextPathIndex
-        let tries = [nextTry .. nextTry + totalTries - 1]
-        let locales = catMaybes <<< fmap (deriveLocale sAsset targetPlane) $ (pathsForIndices tries)
+generatePubKeys ::
+  forall r. CanvasGeneration r
+  => XPub
+  -> Natural
+  -> r (Maybe GeneratePubKeysRes)
+generatePubKeys xpub totalTries = do
+  -- undefined
+  -- TODO: check origin address for sufficient funds
+  mGenerator <- fmap (fmap (entityVal &&& entityKey)) <<< getPublicKeyGenerator <<$ xpub
+  case mGenerator of
+    Nothing -> pure Nothing
+    Just (PublicKeyGenerator {..}, pkgenId) -> do
+      let nextTry = fromIntegral publicKeyGeneratorNextPathIndex
+      let tries = [nextTry .. nextTry + totalTries - 1]
+      let pubsWPaths = (pathsForIndices tries)
+            $>> fmap (id &&& mkPublicKey publicKeyGeneratorXpub)
+            >>> fmap sequenceA
+            >>> catMaybes
+            >>> fmap toInsertFormat
 
-        insertPlane2Locales sAsset scid locales
-        updateCanvas2NextPathIndex scid (nextTry + totalTries)
+      -- let pubsWPaths = fmap toInsertFormat <<< catMaybes <<$ fmap (sequenceA <<< (id &&& mkPublicKey publicKeyGeneratorXpub)) (pathsForIndices tries)
 
-        found :: [SLocale a m n] <- getPlane2Locales cid
-        pure <<< Right $ GenerateWholeCanvasRes (fromIntegral <<< length <<$ found) totalCoordinates
+      insertPublicKeys pkgenId pubsWPaths
+      updateGeneratorIndex pkgenId (nextTry + totalTries)
+
+      found <- fmap (fromIntegral <<< length) <<$ getPublicKeys pkgenId
+      pure <<< Just <<$ GeneratePubKeysRes found
+
   where
-    (xs, ys) = dimensionsCTY cty
-    totalCoordinates = xs * ys
+    toInsertFormat (path, pub) = (pub, path)
 
 
-generateWholeCanvasLogic :: CanvasGeneration r => SCanvas2 a m n -> Natural -> r (Either Text GenerateWholeCanvasRes)
-generateWholeCanvasLogic (SCanvas2 (Canvas2 {..})) totalTries = do
-
+-- generateWholeCanvasLogic :: CanvasGeneration r => SCanvas2 a m n -> Natural -> r (Either Text GenerateWholeCanvasRes)
+-- generateWholeCanvasLogic (SCanvas2 (Canvas2 {..})) totalTries = do
+--
 
 --
 -- data GeneratePaintingCanvasRes = GeneratePaintingCanvasRes

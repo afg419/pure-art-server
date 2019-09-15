@@ -6,27 +6,13 @@ PublicKeyGenerator
   nextPathIndex Word64
   createdAt UTCTime
   updatedAt UTCTime
+  deriving Eq Show
 
 PublicKeyRecord
-  GeneratorId AddressGeneratorId
-  address Text
-
-
-Canvas2
-  xpub XPub
-  xSize Word64
-  ySize Word64
-  asset Asset
-  nextPathIndex Word64
-  createdAt UTCTime
-  updatedAt UTCTime
-
-LocaleRecord
-  canvas2Id Canvas2Id
-  x Word64
-  y Word64
+  publicKeyGeneratorId PublicKeyGeneratorId
+  publicKey PublicKey
   path DerivationPath
-  address Text
   createdAt UTCTime
   updatedAt UTCTime
-  Primary canvas2Id x y
+  Primary publicKeyGeneratorId path
+  deriving Eq Show
