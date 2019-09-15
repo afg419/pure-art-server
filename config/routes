@@ -1,8 +1,6 @@
 -- By default this file is used by `parseRoutesFile` in Foundation.hs
 -- Syntax for this file here: https://www.yesodweb.com/book/routing-and-handlers
 
--- /register RegisterXPubR POST
-/canvas/new InitCanvasGenerationR POST
--- /paint/new InitPaintR POST
+/xpub/new CreatePubkeyGeneratorR POST
 /paint/scaffold ScaffoldPaintR POST
 /paint/submit SubmitPaintR POST

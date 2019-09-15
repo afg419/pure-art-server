@@ -2,32 +2,32 @@
 
 module Live where
 
-import PointGen
-import Import
-import Data.Maybe (fromJust)
--- import Daemons.CanvasGeneration
--- import Effects.Interpreters
--- import Effects.Common
--- import Effects.CanvasGeneration
-import Model
-import Paint
+-- import PointGen
+-- import Import
+-- import Data.Maybe (fromJust)
+-- -- import Daemons.CanvasGeneration
+-- -- import Effects.Interpreters
+-- -- import Effects.Common
+-- -- import Effects.CanvasGeneration
+-- import Model
+-- import Paint
 -- import Application
 
-xpubT :: XPub
-xpubT = fromJust <<< parseXPub <<$ "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
-
-getCanvas2AtCurrent :: IO Canvas2
-getCanvas2AtCurrent = do
-  time <- getCurrentTime
-  pure $ Canvas2 xpubT 100 150 DOGE 0 time time
-
-coordinates :: [Coordinate2]
-coordinates = [(0,0), (50, 20), (200, 300)]
-
-edgesSafe :: Graph Coordinate2
-edgesSafe = Graph [Edge (0,0) (50,20), Edge (0,0) (3,4)]
-edgesUnsafe :: Graph Coordinate2
-edgesUnsafe = Graph [Edge (0,0) (50,20), Edge (0,0) (3,4), Edge (0,0) (200,400)]
+-- xpubT :: XPub
+-- xpubT = fromJust <<< parseXPub <<$ "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
+--
+-- getCanvas2AtCurrent :: IO Canvas2
+-- getCanvas2AtCurrent = do
+--   time <- getCurrentTime
+--   pure $ Canvas2 xpubT 100 150 DOGE 0 time time
+--
+-- coordinates :: [Coordinate2]
+-- coordinates = [(0,0), (50, 20), (200, 300)]
+--
+-- edgesSafe :: Graph Coordinate2
+-- edgesSafe = Graph [Edge (0,0) (50,20), Edge (0,0) (3,4)]
+-- edgesUnsafe :: Graph Coordinate2
+-- edgesUnsafe = Graph [Edge (0,0) (50,20), Edge (0,0) (3,4), Edge (0,0) (200,400)]
 
 -- coordinateT :: KnownNats m n => Plane2 m n -> SCoordinate2 m n
 -- coordinateT p2 = SCoordinate2 { x = 0, y = 0, plane = p2 }

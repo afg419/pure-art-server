@@ -11,9 +11,6 @@ instance Show (Address a) where
   show (DogeA s) = show s
 deriving instance Eq (Address a)
 
-mkAddress :: SAsset a -> Text -> Maybe (Address a)
-mkAddress SDOGE = fmap DogeA <<< readMay
-
 data SomeAddress where
   AddressExists :: Address a -> SomeAddress
 instance Show SomeAddress where

@@ -6,10 +6,16 @@ PublicKeyGenerator
   nextPathIndex Word64
   createdAt UTCTime
   updatedAt UTCTime
+  deriving Eq Show
 
 PublicKeyRecord
-  GeneratorId AddressGeneratorId
-  address Text
+  publicKeyGeneratorId PublicKeyGeneratorId
+  publicKey PublicKey
+  path DerivationPath
+  createdAt UTCTime
+  updatedAt UTCTime
+  Primary publicKeyGeneratorId path
+  deriving Eq Show
 
 PaintingRecord
   publicKeyGeneratorId PublicKeyGeneratorId

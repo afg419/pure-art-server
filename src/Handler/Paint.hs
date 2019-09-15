@@ -15,17 +15,18 @@ import Model
 import Control.Monad.Except
 
 data PaintScaffoldReq = PaintScaffoldReq
-  { canvasId :: Canvas2Id
+  { xpub :: XPub
   , image :: Graph Coordinate2
+  , asset :: Asset
+  , xSize :: Natural
+  , ySize :: Natural
   } deriving Generic
 instance FromJSON PaintScaffoldReq
 
 data SPaintScaffoldReq a m n = SPaintScaffoldReq
-  { cty :: CTY a m n
-  , scid :: SCanvas2Id a m n
-  , sc2 :: SCanvas2 a m n
-  , sImage :: Graph (SCoordinate2 m n)
-  }
+  (SCTY a m n)
+  (Entity PublicKeyGenerator)
+  (Graph (SCoordinate2 m n))
 
 data PaintScaffoldRes v where
   PaintScaffoldRes :: [TxScaffold (BranchCounter v)] -> PaintScaffoldRes v
@@ -34,35 +35,55 @@ deriving instance (Functor PaintScaffoldRes)
 instance ToJSON v => ToJSON (PaintScaffoldRes v) where
   toJSON (PaintScaffoldRes scaffoldList) = toJSON scaffoldList
 
+data DpSLocale (a :: Asset) (m :: Nat) (n :: Nat) = DpSLocale
+  { dPath :: DerivationPath
+  , sLocale :: (SLocale a m n)
+  } deriving (Show, Eq)
+
+instance ToJSON (DpSLocale a m n) where
+  toJSON (DpSLocale dp SLocale{..}) = object
+    [ "coordinate" .= array [cx lCoordinate, cy lCoordinate]
+    , "address" .= (String $ tshow lAddress)
+    , "path" .= (String $ tshow dp)
+    ]
+
 postScaffoldPaintR :: Handler Value
 postScaffoldPaintR = do
   canvasGenReq <- requireCheckJsonBody
   eRes <- runEffects (run @PsqlDB) <<< liftEffectful <<$ scaffoldBestFitPaintLogic canvasGenReq
   either (sendResponseStatus status500) pure eRes
 
-mkSGraph :: CTY a m n
+mkSGraph :: SCTY a m n
   -> Graph Coordinate2
   -> Maybe (Graph (SCoordinate2 m n))
 mkSGraph cty graph = traverse testVertextOOB graph
   where
     testVertextOOB v = mkCoordinate (fst v) (snd v) (dim cty)
 
-scaffoldBestFitPaintLogic :: (CanvasGeneration r) => PaintScaffoldReq -> r (Either Text Value)
-scaffoldBestFitPaintLogic (PaintScaffoldReq cid image) = runExceptT $ do
-    c2 <- ExceptT <<< fmap (mToE "Canvas not found") <<$ getCanvas2 cid
+scaffoldBestFitPaintLogic :: CanvasGeneration r => PaintScaffoldReq -> r (Either Text Value)
+scaffoldBestFitPaintLogic (PaintScaffoldReq xpub image ca cx cy) = runExceptT $ do
+    pkgen <- ExceptT <<< fmap (mToE "Xpub not found") <<$ getPublicKeyGenerator xpub
 
-    withCanvasTy (canvasToCanvasTY c2) $ \cty -> do
-      sc2 <- ExceptT <<< pure <<< mToE "incoherent canvas dimensions" <<$ mkSCanvas2 cty c2
-      sImage <- ExceptT <<< pure <<< mToE "vertices oob" <<$ mkSGraph cty image
-      res <- ExceptT <<< fmap Right <<$ sScaffoldBestFitPaintLogic (SPaintScaffoldReq cty (SCanvas2Id cid) sc2 sImage)
+    withCanvasTy cty $ \scty -> do
+      sImage <- ExceptT <<< pure <<< mToE "vertices oob" <<$ mkSGraph scty image
+      res <- ExceptT <<< fmap Right <<$ sScaffoldBestFitPaintLogic (SPaintScaffoldReq scty pkgen sImage)
       pure <<< toJSON <<$ res
 
-sScaffoldBestFitPaintLogic :: (CanvasGeneration r) => SPaintScaffoldReq a m n -> r (PaintScaffoldRes (SLocale a m n))
-sScaffoldBestFitPaintLogic (SPaintScaffoldReq cty scid (SCanvas2 c2) sImage) = do
-  locales <- getPlane2Locales cty scid
+    where
+      cty = CTY ca cx cy
+
+sScaffoldBestFitPaintLogic :: (CanvasGeneration r) => SPaintScaffoldReq a m n -> r (PaintScaffoldRes (DpSLocale a m n))
+sScaffoldBestFitPaintLogic (SPaintScaffoldReq scty pkgen sImage) = do
+  locales <- fmap (fmap toDpsLocale) <<< getPublicKeys <<$ pkgenId
+
   let localesImage = fmap (getClosestLocale locales) sImage
-  let hotL = hotLocale cty xpub
+  let hotL = DpSLocale hotPath (hotLocale scty xpub)
   pure <<< PaintScaffoldRes <<$ graphToTxScaffold hotL localesImage
   where
-    getClosestLocale ls p = minOn (\l -> l1Dist (lCoordinate l) p) ls
-    xpub = canvas2Xpub c2
+    pkgenId = entityKey pkgen
+    xpub = publicKeyGeneratorXpub <<$ entityVal pkgen
+    getClosestLocale ls p = minOn (\l -> l1Dist (lCoordinate <<$ sLocale l) p) ls
+    toDpsLocale PublicKeyRecord{..} =
+      DpSLocale 
+      publicKeyRecordPath
+      (mkLocale scty publicKeyRecordPublicKey)
