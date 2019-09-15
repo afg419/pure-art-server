@@ -29,4 +29,20 @@ LocaleRecord
   address Text
   createdAt UTCTime
   updatedAt UTCTime
-  Primary canvas2Id x y
+  Primary publicKeyGeneratorId path
+  deriving Eq Show
+
+PaintingRecord
+  publicKeyGeneratorId PublicKeyGeneratorId
+  xSize Word64
+  ySize Word64
+  createdAt UTCTime
+  updatedAt UTCTime
+
+EdgeRecord
+  paintingRecordId PaintingRecordId
+  fromX Word64
+  fromY Word64
+  toX Word64
+  toY Word64
+  createdAt UTCTime
