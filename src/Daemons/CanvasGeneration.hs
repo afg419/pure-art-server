@@ -4,43 +4,42 @@ module Daemons.CanvasGeneration where
 
 import PointGen
 import Model
-import Effects.CanvasGeneration
 import Import hiding (undefined, sum, filter, elem)
 
-data GeneratePubKeysRes = GeneratePubKeysRes
-  { totalAddresses :: Natural
-  } deriving (Eq, Show)
-
-generatePubKeys ::
-  forall r. CanvasGeneration r
-  => XPub
-  -> Natural
-  -> r (Maybe GeneratePubKeysRes)
-generatePubKeys xpub totalTries = do
-  -- undefined
-  -- TODO: check origin address for sufficient funds
-  mGenerator <- fmap (fmap (entityVal &&& entityKey)) <<< getPublicKeyGenerator <<$ xpub
-  case mGenerator of
-    Nothing -> pure Nothing
-    Just (PublicKeyGenerator {..}, pkgenId) -> do
-      let nextTry = fromIntegral publicKeyGeneratorNextPathIndex
-      let tries = [nextTry .. nextTry + totalTries - 1]
-      let pubsWPaths = (pathsForIndices tries)
-            $>> fmap (id &&& mkPublicKey publicKeyGeneratorXpub)
-            >>> fmap sequenceA
-            >>> catMaybes
-            >>> fmap toInsertFormat
-
-      -- let pubsWPaths = fmap toInsertFormat <<< catMaybes <<$ fmap (sequenceA <<< (id &&& mkPublicKey publicKeyGeneratorXpub)) (pathsForIndices tries)
-
-      insertPublicKeys pkgenId pubsWPaths
-      updateGeneratorIndex pkgenId (nextTry + totalTries)
-
-      found <- fmap (fromIntegral <<< length) <<$ getPublicKeys pkgenId
-      pure <<< Just <<$ GeneratePubKeysRes found
-
-  where
-    toInsertFormat (path, pub) = (pub, path)
+-- data GeneratePubKeysRes = GeneratePubKeysRes
+--   { totalAddresses :: Natural
+--   } deriving (Eq, Show)
+--
+-- generatePubKeys ::
+--   forall r. CanvasGeneration r
+--   => XPub
+--   -> Natural
+--   -> r (Maybe GeneratePubKeysRes)
+-- generatePubKeys xpub totalTries = do
+--   -- undefined
+--   -- TODO: check origin address for sufficient funds
+--   mGenerator <- fmap (fmap (entityVal &&& entityKey)) <<< getPublicKeyGenerator <<$ xpub
+--   case mGenerator of
+--     Nothing -> pure Nothing
+--     Just (PublicKeyGenerator {..}, pkgenId) -> do
+--       let nextTry = fromIntegral publicKeyGeneratorNextPathIndex
+--       let tries = [nextTry .. nextTry + totalTries - 1]
+--       let pubsWPaths = (pathsForIndices tries)
+--             $>> fmap (id &&& mkPublicKey publicKeyGeneratorXpub)
+--             >>> fmap sequenceA
+--             >>> catMaybes
+--             >>> fmap toInsertFormat
+--
+--       -- let pubsWPaths = fmap toInsertFormat <<< catMaybes <<$ fmap (sequenceA <<< (id &&& mkPublicKey publicKeyGeneratorXpub)) (pathsForIndices tries)
+--
+--       insertPublicKeys pkgenId pubsWPaths
+--       updateGeneratorIndex pkgenId (nextTry + totalTries)
+--
+--       found <- fmap (fromIntegral <<< length) <<$ getPublicKeys pkgenId
+--       pure <<< Just <<$ GeneratePubKeysRes found
+--
+--   where
+--     toInsertFormat (path, pub) = (pub, path)
 
 
 -- generateWholeCanvasLogic :: CanvasGeneration r => SCanvas2 a m n -> Natural -> r (Either Text GenerateWholeCanvasRes)

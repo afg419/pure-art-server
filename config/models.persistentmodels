@@ -1,33 +1,32 @@
 -- By default this file is used by `persistFileWith` in Model.hs (which is imported by Foundation.hs)
 -- Syntax for this file here: https://github.com/yesodweb/persistent/blob/master/docs/Persistent-entity-syntax.md
 
-PublicKeyGenerator
+PaintingRecord
+  asset Asset
+  xSize Word64
+  ySize Word64
   xpub XPub
   nextPathIndex Word64
   createdAt UTCTime
   updatedAt UTCTime
-  deriving Eq Show
 
-PublicKeyRecord
-  publicKeyGeneratorId PublicKeyGeneratorId
-  publicKey PublicKey
+LocaleRecord
+  paintingRecordId PaintingRecordId
   path DerivationPath
+  address Text
+  x Word64
+  y Word64
   createdAt UTCTime
-  updatedAt UTCTime
-  Primary publicKeyGeneratorId path
-  deriving Eq Show
-
-PaintingRecord
-  publicKeyGeneratorId PublicKeyGeneratorId
-  xSize Word64
-  ySize Word64
-  createdAt UTCTime
-  updatedAt UTCTime
 
 EdgeRecord
-  paintingRecordId PaintingRecordId
-  fromX Word64
-  fromY Word64
-  toX Word64
-  toY Word64
+  from VertexRecordId
+  to VertexRecordId
   createdAt UTCTime
+
+VertexRecord
+  paintingRecordId PaintingRecordId
+  x Word64
+  y Word64
+  closestLocale LocaleRecordId Maybe
+  createdAt UTCTime
+  Primary paintingRecordId x y

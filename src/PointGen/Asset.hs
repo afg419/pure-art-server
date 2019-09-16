@@ -51,6 +51,11 @@ data SCTY (a :: Asset) (m :: Nat) (n :: Nat) where
     , dim :: Plane2 m n
     } -> SCTY a m n
 
+demoteSCTY :: SCTY a m n -> CTY
+demoteSCTY scty = CTY (fromSing <<< sAsset <<$ scty) xSize ySize
+  where
+    (xSize, ySize) = dimensionsSCTY scty
+
 dimensionsSCTY :: SCTY a m n -> (Natural, Natural)
 dimensionsSCTY (SCTY _ p) = dimensions p
 

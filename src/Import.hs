@@ -2,7 +2,7 @@ module Import
     ( module Import
     ) where
 
-import Import.NoFoundation   as Import hiding (all, length, (\\), zip, id, head, Proxy)
+import Import.NoFoundation   as Import hiding (to, from, all, length, (\\), zip, id, head, Proxy)
 import Control.Category      as Import hiding (id)
 import GHC.Read as Import
 import GHC.Generics as Import

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Effects.Paintings where
 
@@ -17,37 +18,39 @@ instance ToJSON Painting2 where
   toJSON (Painting2 g) = toJSON g
 
 class Effect s => Paintings s where
-  insertPainting :: PublicKeyGeneratorId -> Plane2 m n -> SPainting2 m n -> s PaintingRecordId
-  retrievePainting :: PaintingRecordId -> s (Maybe Painting2)
+  insertPainting :: SCTY a m n -> XPub -> SPainting2 m n -> s (Safe PaintingRecordId a m n)
+  updatePaintingIndex :: PaintingRecordId -> Natural -> s ()
 
 instance Paintings PsqlDB where
-  insertPainting pkgenId p2 (SPainting2 (Graph es)) = PsqlDB $ do
+  insertPainting scty xpub (SPainting2 g@(Graph es)) = PsqlDB $ do
     now <- liftIO getCurrentTime
 
-    let (xSize, ySize) = dimensions p2
-    prid <- insert <<$ PaintingRecord False pkgenId (fromIntegral xSize) (fromIntegral ySize) now now
-    let edgeRecords = fmap (edgeToEdgeRecord prid now) es
-    insertMany_ edgeRecords
-    pure prid
+    let (CTY sa sx sy) = demoteSCTY scty
+    precId <- insert <<$ PaintingRecord sa (fromIntegral sx) (fromIntegral sy) xpub 0 now now
+    let paintingVertices = verticesG g
 
-  retrievePainting prid = PsqlDB $ do
-    mPainting <- get prid
-    case mPainting of
-      Nothing -> pure Nothing
-      Just _ -> do
-        edgeRecords <- fmap entityVal <$> selectList [ EdgeRecordPaintingRecordId ==. prid] []
-        pure <<< Just <<< Painting2 <<< Graph <<< fmap edgeRecordToEdge <<$ edgeRecords
+    let vertexRecords = fmap (vertexToVertexRecord precId now) paintingVertices
+    insertMany_ vertexRecords
+
+    let edgeRecords = fmap (edgeToEdgeRecord precId now) es
+    insertMany_ edgeRecords
+    pure <<$ Safe precId
+  updatePaintingIndex precId nextIndex = [PaintingRecordNextPathIndex =. (fromIntegral nextIndex)]
+    $>> update precId
+    >>> PsqlDB
+
+
+vertexToVertexRecord :: PaintingRecordId -> UTCTime -> SCoordinate2 m n -> VertexRecord
+vertexToVertexRecord prid t (SCoordinate2{..}) = VertexRecord prid (fromIntegral cx) (fromIntegral cy) Nothing t
 
 edgeToEdgeRecord :: PaintingRecordId -> UTCTime -> Edge (SCoordinate2 m n) -> EdgeRecord
-edgeToEdgeRecord prid t (Edge from' to') = EdgeRecord prid fromX fromY toX toY t
+edgeToEdgeRecord prid t (Edge from' to') = EdgeRecord from to t
   where
-    fromX = fromIntegral <<$ cx from'
-    fromY = fromIntegral <<$ cy from'
-    toX = fromIntegral <<$ cx to'
-    toY = fromIntegral <<$ cy to'
+    from = VertexRecordKey prid (fromIntegral <<$ cx from') (fromIntegral <<$ cy from')
+    to = VertexRecordKey prid (fromIntegral <<$ cx to') (fromIntegral <<$ cy to')
 
 edgeRecordToEdge :: EdgeRecord -> Edge Coordinate2
-edgeRecordToEdge (EdgeRecord _ fromX fromY toX toY _) =
+edgeRecordToEdge (EdgeRecord (VertexRecordKey _ fromX fromY) (VertexRecordKey _ toX toY) _) =
   Edge
   (fromIntegral fromX, fromIntegral fromY)
   (fromIntegral toX, fromIntegral toY)

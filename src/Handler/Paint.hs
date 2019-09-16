@@ -7,7 +7,6 @@ module Handler.Paint where
 
 import Import hiding (undefined, natVal)
 import Foundation
-import Effects.CanvasGeneration
 import Effects.Interpreters
 import Effects.Paintings
 import Effects.Common
@@ -20,7 +19,7 @@ import Data.Aeson
 postSubmitPaintR :: XPub -> Handler Value
 postSubmitPaintR xpub = do
   submitPaintReq <- requireCheckJsonBody
-  eRes <- runEffects (run @PsqlDB) <<< liftEffectful <<$ submitPaintLogic xpub savePaintReq
+  eRes <- runEffects (run @PsqlDB) <<< liftEffectful <<$ submitPaintLogic xpub submitPaintReq
   either (sendResponseStatus status500) pure eRes
 
 data SubmitPaintReq = SubmitPaintReq
@@ -36,10 +35,9 @@ instance FromJSON SubmitPaintReq where
     let submitCty = CTY ca cx cy
     pure SubmitPaintReq{..}
 
-submitPaintLogic :: (Paintings s, CanvasGeneration s) => XPub -> PaintingRecordId -> s (Either Text Value)
+submitPaintLogic :: (Paintings s) => XPub -> SubmitPaintReq -> s (Either Text Value)
 submitPaintLogic xpub (SubmitPaintReq i cty) = runExceptT $ do
-    _ <- ExceptT <<< fmap (mToE "Xpub not found") <<$ getPublicKeyGeneratorId xpub
-    fmap toJSON <<< ExceptT <<< fmap (mToE "Painting not found") <<$ retrievePainting prid
+    undefined
 
 
 -- postSavePaintR :: XPub -> Handler Value
