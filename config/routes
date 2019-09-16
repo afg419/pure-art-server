@@ -2,5 +2,9 @@
 -- Syntax for this file here: https://www.yesodweb.com/book/routing-and-handlers
 
 /xpub/new CreatePubkeyGeneratorR POST
-/paint/scaffold ScaffoldPaintR POST
-/paint/submit SubmitPaintR POST
+
+-- /paint/#XPub/scaffold ScaffoldPaintR POST
+
+-- /paint/#XPub/save SavePaintR POST
+-- !/paint/#XPub/#PaintingRecordId RetrievePaintR GET
+!/paint/#XPub/submit SubmitPaintR POST

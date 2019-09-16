@@ -35,6 +35,13 @@ hotAddress sa x = deriveAddress sa x hotPath $>> fromJust
 --------------------------------------------------------------------------------
 
 newtype XPub = XPub {runXPub :: Crypto.XPub}
+
+instance Read XPub where
+  readsPrec _ _ = debug "Fix this" Import.undefined
+instance PathPiece XPub where
+  toPathPiece = tshow
+  fromPathPiece str = parseXPub <<< encodeUtf8 $ str
+
 newtype PublicKey = PublicKey {runPubKey :: Crypto.PublicKey} deriving (Eq)
 instance Show PublicKey where
   show = show <<< runPubKey

@@ -15,6 +15,8 @@ import qualified Data.Vector as V
 import qualified Data.HashMap.Strict as HM
 
 data Edge v = Edge { eSrc :: v, eTgt :: v } deriving (Functor, Foldable, Traversable)
+instance ToJSON v => ToJSON (Edge v) where
+  toJSON (Edge s t) = toJSON [s, t]
 deriving instance Show v => Show (Edge v)
 instance Eq v => Eq (Edge v) where -- for now we don't distinguish between sources and targets
   Edge s1 t1 == Edge s2 t2 = ((s1 == s2) || (s1 == t2)) && ((t1 == s2) || (t1 == t2))
@@ -71,6 +73,9 @@ inEdgeM v e = if (v `inEdge` e)
   else Nothing
 
 data Graph v  = Graph { edges :: [Edge v] } deriving (Functor, Foldable, Traversable)
+instance ToJSON v => ToJSON (Graph v) where
+  toJSON (Graph es) = toJSON es
+
 instance Eq v => Semigroup (Graph v) where
   (Graph e1) <> (Graph e2) = Graph <<< rmdups <<$ e1 <> e2
 instance Eq v => Monoid (Graph v) where

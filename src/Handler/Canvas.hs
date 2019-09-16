@@ -6,6 +6,7 @@
 module Handler.Canvas where
 
 import Import
+import Foundation
 import Effects.CanvasGeneration
 import Effects.Common
 import Effects.Interpreters

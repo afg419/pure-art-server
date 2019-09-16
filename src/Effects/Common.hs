@@ -1,7 +1,7 @@
 module Effects.Common where
 
 import Import
-
+import Foundation
 -- a wrapper for an interpreter from s to Handler
 newtype Interpreter s = Interpreter { interpret :: forall a t. MonadTrans t => s a -> t Handler a }
 

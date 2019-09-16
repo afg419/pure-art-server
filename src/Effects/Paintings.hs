@@ -13,6 +13,9 @@ import Import hiding (undefined)
 data SPainting2 (m :: Nat) (n :: Nat) = SPainting2 (Graph (SCoordinate2 m n))
 data Painting2 = Painting2 (Graph Coordinate2)
 
+instance ToJSON Painting2 where
+  toJSON (Painting2 g) = toJSON g
+
 class Effect s => Paintings s where
   insertPainting :: PublicKeyGeneratorId -> Plane2 m n -> SPainting2 m n -> s PaintingRecordId
   retrievePainting :: PaintingRecordId -> s (Maybe Painting2)
@@ -22,7 +25,7 @@ instance Paintings PsqlDB where
     now <- liftIO getCurrentTime
 
     let (xSize, ySize) = dimensions p2
-    prid <- insert <<$ PaintingRecord pkgenId (fromIntegral xSize) (fromIntegral ySize) now now
+    prid <- insert <<$ PaintingRecord False pkgenId (fromIntegral xSize) (fromIntegral ySize) now now
     let edgeRecords = fmap (edgeToEdgeRecord prid now) es
     insertMany_ edgeRecords
     pure prid
