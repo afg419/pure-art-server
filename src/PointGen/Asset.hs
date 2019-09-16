@@ -43,7 +43,7 @@ instance PersistField Asset where
 instance PersistFieldSql Asset where
   sqlType _ = SqlString
 
-data CTY = CTY Asset Natural Natural
+data CTY = CTY Asset Natural Natural deriving Eq
 
 data SCTY (a :: Asset) (m :: Nat) (n :: Nat) where
   SCTY :: (KnownNat m, KnownNat n) =>

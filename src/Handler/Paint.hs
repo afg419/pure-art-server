@@ -13,19 +13,28 @@ import Effects.Common
 import PointGen
 import Paint
 import Model
-import Control.Monad.Except
 import Data.Aeson
 
 postSubmitPaintR :: XPub -> Handler Value
 postSubmitPaintR xpub = do
   submitPaintReq <- requireCheckJsonBody
   eRes <- runEffects (run @PsqlDB) <<< liftEffectful <<$ submitPaintLogic xpub submitPaintReq
-  either (sendResponseStatus status500) pure eRes
+  either (sendResponseStatus status500) (pure <<< toJSON) eRes
+
+submitPaintLogic :: (Paintings s) => XPub -> SubmitPaintReq -> s (Either Text SubmitPaintRes)
+submitPaintLogic xpub (SubmitPaintReq i cty) = do
+    withCanvasTy cty $ \scty -> do
+      case mToE "vertices oob" <<< fmap SPainting2 <<$ mkSGraph (dim scty) i of
+        Left e -> pure <<< Left <<$ e
+        Right sPainting2 -> do
+          sPaintingId <- insertPainting scty xpub sPainting2
+          pure <<< Right <<< SubmitPaintRes <<< fromSafe <<$ sPaintingId
 
 data SubmitPaintReq = SubmitPaintReq
   { submitImage :: Graph Coordinate2
   , submitCty :: CTY
   } deriving Generic
+
 instance FromJSON SubmitPaintReq where
   parseJSON = withObject "submit painting request" $ \o -> do
     submitImage <- o .: "image"
@@ -35,9 +44,11 @@ instance FromJSON SubmitPaintReq where
     let submitCty = CTY ca cx cy
     pure SubmitPaintReq{..}
 
-submitPaintLogic :: (Paintings s) => XPub -> SubmitPaintReq -> s (Either Text Value)
-submitPaintLogic xpub (SubmitPaintReq i cty) = runExceptT $ do
-    undefined
+newtype SubmitPaintRes = SubmitPaintRes { submitPaintingId :: PaintingRecordId }
+
+instance ToJSON SubmitPaintRes where
+  toJSON res = object [ "paintingId" .= submitPaintingId res ]
+
 
 
 -- postSavePaintR :: XPub -> Handler Value

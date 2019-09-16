@@ -19,6 +19,8 @@ instance ToJSON Painting2 where
 
 class Effect s => Paintings s where
   insertPainting :: SCTY a m n -> XPub -> SPainting2 m n -> s (Safe PaintingRecordId a m n)
+  retrievePaintingVertices :: Plane2 m n -> Safe PaintingRecordId a m n  -> s [Safe VertexRecord a m n]
+  retrievePainting :: SCTY a m n -> Safe PaintingRecordId a m n  -> s (Either Text (Safe PaintingRecord a m n))
   updatePaintingIndex :: PaintingRecordId -> Natural -> s ()
 
 instance Paintings PsqlDB where
@@ -35,9 +37,18 @@ instance Paintings PsqlDB where
     let edgeRecords = fmap (edgeToEdgeRecord precId now) es
     insertMany_ edgeRecords
     pure <<$ Safe precId
+  retrievePaintingVertices p2 sPrecId =
+    selectList [ VertexRecordPaintingRecordId ==. fromSafe sPrecId] []
+    $>> fmap (entityVal >>> mkSafeVertex p2 $>> mapMaybe) >>> PsqlDB
+  retrievePainting scty sPrecId = PsqlDB $ do
+    mPainting <- get (fromSafe sPrecId)
+    case mPainting of
+      Nothing -> Left "Painting not found" $>> pure
+      Just p -> mkSafePainting scty p $>> mToE "Painting cty does not match" >>> pure
   updatePaintingIndex precId nextIndex = [PaintingRecordNextPathIndex =. (fromIntegral nextIndex)]
     $>> update precId
     >>> PsqlDB
+
 
 
 vertexToVertexRecord :: PaintingRecordId -> UTCTime -> SCoordinate2 m n -> VertexRecord

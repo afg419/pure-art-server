@@ -5,8 +5,8 @@ PaintingRecord
   asset Asset
   xSize Word64
   ySize Word64
-  xpub XPub
-  nextPathIndex Word64
+  xPub XPub -- extract to account
+  nextPathIndex Word64 -- extract to generator for this painting
   createdAt UTCTime
   updatedAt UTCTime
 
@@ -17,6 +17,7 @@ LocaleRecord
   x Word64
   y Word64
   createdAt UTCTime
+  Primary paintingRecordId x y
 
 EdgeRecord
   from VertexRecordId
