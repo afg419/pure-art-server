@@ -3,6 +3,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module PointGen.Coordinate where
 
@@ -26,8 +28,21 @@ instance Ord (SCoordinate2 m n) where -- instance used for nubbing localeRecords
       then y1 <= y2
       else False
 
-l1Dist :: SCoordinate2 m n -> SCoordinate2 m n -> Natural
-l1Dist c1 c2 = abs (cx c1 - cx c2) + abs (cy c1 - cy c2)
+class TwoDimensional c where
+  getX :: c -> Natural
+  getY :: c -> Natural
+
+l1Dist :: (TwoDimensional c, TwoDimensional d) => c -> d -> Natural
+l1Dist c d = abs (getX c - getX d) + abs (getY c - getY d)
+
+
+instance TwoDimensional Coordinate2 where
+  getX = fst
+  getY = snd
+
+instance TwoDimensional (SCoordinate2 m n) where
+  getX = cx
+  getY = cy
 
 mkCoordinate :: forall m n. Natural -> Natural -> Plane2 m n -> Maybe (SCoordinate2 m n)
 mkCoordinate x' y' P2 = if xValid && yValid

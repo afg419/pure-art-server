@@ -25,12 +25,9 @@ fromSafe :: Safe s a m n -> s
 fromSafe (Safe s) = s
 
 mkSafeVertex :: forall a m n. Plane2 m n -> VertexRecord -> Maybe (Safe VertexRecord a m n)
-mkSafeVertex p2 v@VertexRecord{..} = case mkCoordinate vx vy p2 of
+mkSafeVertex p2 v@VertexRecord{..} = case mkCoordinate (getX v) (getY v) p2 of
   Nothing -> Nothing
   Just _ -> Just <<$ Safe v
-  where
-    vx = fromIntegral vertexRecordX
-    vy = fromIntegral vertexRecordY
 
 mkSafePainting :: forall a m n. SCTY a m n -> PaintingRecord -> Maybe (Safe PaintingRecord a m n)
 mkSafePainting scty p@PaintingRecord{..} = if demoteSCTY scty == CTY pa px py
@@ -40,3 +37,26 @@ mkSafePainting scty p@PaintingRecord{..} = if demoteSCTY scty == CTY pa px py
     px = fromIntegral paintingRecordXSize
     py = fromIntegral paintingRecordYSize
     pa = paintingRecordAsset
+
+vertexRecordId :: VertexRecord -> VertexRecordId
+vertexRecordId VertexRecord{..} =
+  VertexRecordKey 
+    vertexRecordPaintingRecordId
+    vertexRecordX
+    vertexRecordY
+
+instance TwoDimensional LocaleRecord where
+  getX = fromIntegral <<< localeRecordX
+  getY = fromIntegral <<< localeRecordY
+
+instance TwoDimensional VertexRecord where
+  getX = fromIntegral <<< vertexRecordX
+  getY = fromIntegral <<< vertexRecordY
+
+instance TwoDimensional (Safe VertexRecord a m n) where
+  getX = getX <<< fromSafe
+  getY = getY <<< fromSafe
+
+instance TwoDimensional VertexRecordId where
+  getX (VertexRecordKey _ x _) = fromIntegral x
+  getY (VertexRecordKey _ _ y) = fromIntegral y

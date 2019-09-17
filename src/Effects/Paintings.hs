@@ -22,6 +22,7 @@ class Effect s => Paintings s where
   retrievePaintingVertices :: Plane2 m n -> Safe PaintingRecordId a m n  -> s [Safe VertexRecord a m n]
   retrievePainting :: SCTY a m n -> Safe PaintingRecordId a m n  -> s (Either Text (Safe PaintingRecord a m n))
   updatePaintingIndex :: PaintingRecordId -> Natural -> s ()
+  replaceVertexLocale :: VertexRecordId -> SLocale a m n -> s ()
 
 instance Paintings PsqlDB where
   insertPainting scty xpub (SPainting2 g@(Graph es)) = PsqlDB $ do
@@ -48,8 +49,6 @@ instance Paintings PsqlDB where
   updatePaintingIndex precId nextIndex = [PaintingRecordNextPathIndex =. (fromIntegral nextIndex)]
     $>> update precId
     >>> PsqlDB
-
-
 
 vertexToVertexRecord :: PaintingRecordId -> UTCTime -> SCoordinate2 m n -> VertexRecord
 vertexToVertexRecord prid t (SCoordinate2{..}) = VertexRecord prid (fromIntegral cx) (fromIntegral cy) Nothing t

@@ -73,6 +73,10 @@ instance ToJSON (SLocale a m n) where
 
 data Locale = forall a m n. Locale (SLocale a m n)
 
+instance TwoDimensional (SLocale a m n) where
+  getX = getX <<< lCoordinate
+  getY = getY <<< lCoordinate
+
 deriveLocale :: SCTY a m n -> XPub -> DerivationPath -> Maybe (SLocale a m n)
 deriveLocale cty xpub dpath = scaleLocale (dim cty) <$> deriveFibreLocale (sAsset cty) xpub dpath
 

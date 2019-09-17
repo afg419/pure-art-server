@@ -19,7 +19,7 @@ generateLocales ::
   -> r (Either Text GenerateLocalesRes)
 generateLocales scty sPrid totalTries = runExceptT $ do
   painting <- fmap fromSafe <<< ExceptT <<$ retrievePainting scty sPrid
-  vertices <- fmap (fmap fromSafe) <<< lift <<$ retrievePaintingVertices (dim scty) sPrid
+  vertices <- lift <<$ retrievePaintingVertices (dim scty) sPrid
 
   let nextTry = fromIntegral (paintingRecordNextPathIndex painting)
   let tries = [nextTry .. nextTry + totalTries - 1]
@@ -27,14 +27,29 @@ generateLocales scty sPrid totalTries = runExceptT $ do
   let xpub = paintingRecordXPub painting
 
   let locales = mapMaybe (deriveLocale scty xpub) pubsWPaths
-  traverse (\loc -> find )
 
+  for locales $ \l -> do
+    let vertex = minOn (l1Dist l) vertices
+    let candidateDistance = l1Dist l vertex
+
+    let previousClosestLocale = vertexRecordClosestLocale <<$ fromSafe vertex
+    case previousClosestLocale of
+      Nothing -> replaceVertexLocale (vertexRecordId vertex) l
+      Just prevLocale -> if candidateDistance < l1Dist prevLocale vertex
+        then replaceVertexLocale (vertexRecordId vertex) l
+        else pure ()
+
+    -- let previousDistance = l1Dist (vertexRecordClosestLocale <<$ fromSafe vertex) vertex
+    -- if candidateDistance < previousDistance
+    --   then pure ()
+    --   else pure ()
+
+  -- minOn () vertices
   -- insertPublicKeys pkgenId pubsWPaths
   -- updateGeneratorIndex pkgenId (nextTry + totalTries)
   --
   -- found <- fmap (fromIntegral <<< length) <<$ getPublicKeys pkgenId
   -- pure <<< Just <<$ GeneratePubKeysRes found
-
 
   undefined
   -- case mGenerator of
