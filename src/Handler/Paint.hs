@@ -21,10 +21,10 @@ postSubmitPaintR xpub = do
   eRes <- runEffects (run @PsqlDB) <<< liftEffectful <<$ submitPaintLogic xpub submitPaintReq
   either (sendResponseStatus status500) (pure <<< toJSON) eRes
 
-submitPaintLogic :: (Paintings s) => XPub -> SubmitPaintReq -> s (Either Text SubmitPaintRes)
-submitPaintLogic xpub (SubmitPaintReq i cty) = do
-    withCanvasTy cty $ \scty -> do
-      case mToE "vertices oob" <<< fmap SPainting2 <<$ mkSGraph (dim scty) i of
+submitPaintLogic :: Paintings s => XPub -> SubmitPaintReq -> s (Either Text SubmitPaintRes)
+submitPaintLogic xpub req = do
+    withCanvasTy req $ \(scty,_) -> do
+      case mToE "vertices oob" <<< fmap SPainting2 <<$ mkSGraph (dim scty) (submitImage req) of
         Left e -> pure <<< Left <<$ e
         Right sPainting2 -> do
           sPaintingId <- insertPainting scty xpub sPainting2
@@ -32,16 +32,22 @@ submitPaintLogic xpub (SubmitPaintReq i cty) = do
 
 data SubmitPaintReq = SubmitPaintReq
   { submitImage :: Graph Coordinate2
-  , submitCty :: CTY
+  , submitAsset :: Asset
+  , submitXSize :: Natural
+  , submitYSize :: Natural
   } deriving Generic
+
+instance CTY SubmitPaintReq where
+  ctyAsset = submitAsset
+  ctyX = fromIntegral <<< submitXSize
+  ctyY = fromIntegral <<< submitYSize
 
 instance FromJSON SubmitPaintReq where
   parseJSON = withObject "submit painting request" $ \o -> do
     submitImage <- o .: "image"
-    cx <- o .: "xSize"
-    cy <- o .: "ySize"
-    ca <- o .: "asset"
-    let submitCty = CTY ca cx cy
+    submitXSize <- o .: "xSize"
+    submitYSize <- o .: "ySize"
+    submitAsset <- o .: "asset"
     pure SubmitPaintReq{..}
 
 newtype SubmitPaintRes = SubmitPaintRes { submitPaintingId :: PaintingRecordId }

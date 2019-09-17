@@ -52,10 +52,10 @@ dependencies:
 - quickcheck-assertions
 - haskoin-core
 - comonad
-- vector-sized
 - finite-typelits
 - mtl
 - transformers
+- unliftio
 
 # The library contains all of our application code. The executable
 # defined below is just a thin wrapper.

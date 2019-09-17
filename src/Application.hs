@@ -20,6 +20,7 @@ module Application
     , db
     ) where
 
+import Control.Concurrent                   (forkIO)
 import Control.Monad.Logger                 (liftLoc, runLoggingT)
 import Database.Persist.Postgresql          (createPostgresqlPool, pgConnStr,
                                              pgPoolSize, runSqlPool)
@@ -43,6 +44,7 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 -- Don't forget to add new modules to your cabal file!
 import Handler.Paint
 import Model
+import Daemons.CanvasGeneration
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
@@ -153,8 +155,13 @@ appMain = do
     -- Generate a WAI Application from the foundation
     app <- makeApplication foundation
 
+    -- Try to complete all paintings
+    _ <- forkIO $ unsafeHandler foundation approximateVerticesLoop
+
     -- Run the application with Warp
     runSettings (warpSettings foundation) app
+
+
 
 --------------------------------------------------------------
 -- Functions for DevelMain.hs (a way to run the app from GHCi)

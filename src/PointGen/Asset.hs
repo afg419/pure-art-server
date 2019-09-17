@@ -43,7 +43,21 @@ instance PersistField Asset where
 instance PersistFieldSql Asset where
   sqlType _ = SqlString
 
-data CTY = CTY Asset Natural Natural deriving Eq
+class CTY s where
+  ctyAsset :: s -> Asset
+  ctyX :: Integral a => s -> a
+  ctyY :: Integral a => s -> a
+
+ctyEq :: (CTY s, CTY r) => r -> s -> Bool
+ctyEq r s = (ra, rx, ry) == (sa, sx, sy)
+  where
+    ra = ctyAsset r
+    rx = ctyX r :: Integer
+    ry = ctyY r :: Integer
+
+    sa = ctyAsset s
+    sx = ctyX s :: Integer
+    sy = ctyY s :: Integer
 
 data SCTY (a :: Asset) (m :: Nat) (n :: Nat) where
   SCTY :: (KnownNat m, KnownNat n) =>
@@ -51,18 +65,23 @@ data SCTY (a :: Asset) (m :: Nat) (n :: Nat) where
     , dim :: Plane2 m n
     } -> SCTY a m n
 
-demoteSCTY :: SCTY a m n -> CTY
-demoteSCTY scty = CTY (fromSing <<< sAsset <<$ scty) xSize ySize
-  where
-    (xSize, ySize) = dimensionsSCTY scty
+instance CTY (SCTY a m n) where
+  ctyAsset = fromSing <<< sAsset
+  ctyX = fromIntegral <<< fst <<< dimensionsSCTY
+  ctyY = fromIntegral <<< snd <<< dimensionsSCTY
+
+data Safe (s :: *) (a :: Asset) (m :: Nat) (n :: Nat) = Safe s
+fromSafe :: Safe s a m n -> s
+fromSafe (Safe s) = s
 
 dimensionsSCTY :: SCTY a m n -> (Natural, Natural)
 dimensionsSCTY (SCTY _ p) = dimensions p
 
-dimensionsCTY :: CTY -> (Natural, Natural)
-dimensionsCTY (CTY _ m n) = (m,n)
-
-withCanvasTy :: CTY -> (forall (a :: Asset) m n. SCTY a m n -> r) -> r
-withCanvasTy (CTY a i j) f = case (someAsset a, someNatVal i, someNatVal j) of
+withCanvasTy :: CTY cty => cty -> (forall (a :: Asset) m n. (SCTY a m n, Safe cty a m n) -> r) -> r
+withCanvasTy cty f = case (someAsset a, someNatVal i, someNatVal j) of
   (SomeSing (s :: SAsset a), SomeNat (Proxy :: Proxy m), SomeNat (Proxy :: Proxy n)) ->
-    f $ SCTY s (P2 @m @n)
+    f $ (SCTY s (P2 @m @n), Safe cty)
+  where
+    a = ctyAsset cty
+    i = ctyX cty
+    j = ctyY cty

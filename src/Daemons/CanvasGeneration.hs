@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Daemons.CanvasGeneration where
 
@@ -7,119 +8,76 @@ import Model
 import Effects.Paintings
 import Control.Monad.Trans.Except
 import Import hiding (undefined, sum, filter, elem)
+import Foundation
+import UnliftIO.Concurrent (threadDelay)
+import Effects.Interpreters
+import Effects.Common
+
+approximateVerticesLoop :: Handler ()
+approximateVerticesLoop = forever $ do
+  _ <- liftHandler <<< runEffects (run @PsqlDB) <<< liftEffectful $ do
+    paintingEntities <- retrieveParitallyApproximatedPaintings
+
+    for paintingEntities $ \paintingE -> do
+      withCanvasTy paintingE $ \(scty, sPaintingE) -> do
+        approximateVerticesWithLocales scty sPaintingE 1000
+
+  threadDelay $ 1 * 10000000
 
 data GenerateLocalesRes =
   LocalesComplete | LocalesImperfect Natural Natural Natural -- missing, imperfect, total
 
-generateLocales ::
+approximateVerticesWithLocales ::
   forall a m n r. Paintings r
   => SCTY a m n
-  -> Safe PaintingRecordId a m n
+  -> Safe (Entity PaintingRecord) a m n
   -> Natural
   -> r (Either Text GenerateLocalesRes)
-generateLocales scty sPrid totalTries = runExceptT $ do
-  painting <- fmap fromSafe <<< ExceptT <<$ retrievePainting scty sPrid
+approximateVerticesWithLocales scty sPrec totalTries = runExceptT $ do
+  let painting = fromSafe <<$ sEntityVal sPrec
+  let sPrid = sEntityKey sPrec
   vertices <- lift <<$ retrievePaintingVertices (dim scty) sPrid
 
   let nextTry = fromIntegral (paintingRecordNextPathIndex painting)
   let tries = [nextTry .. nextTry + totalTries - 1]
-  let pubsWPaths = (pathsForIndices tries)
+  let pathsToTry = pathsForIndices tries
   let xpub = paintingRecordXPub painting
 
-  let locales = mapMaybe (deriveLocale scty xpub) pubsWPaths
+  let locales = mapMaybe (deriveLocale scty xpub) pathsToTry
 
-  for locales $ \l -> do
-    let vertex = minOn (l1Dist l) vertices
-    let candidateDistance = l1Dist l vertex
+  _ <- lift <<< for locales <<$ replaceVertexLocaleIfBetterApproximation vertices
 
-    let previousClosestLocale = vertexRecordClosestLocale <<$ fromSafe vertex
-    case previousClosestLocale of
-      Nothing -> replaceVertexLocale (vertexRecordId vertex) l
-      Just prevLocale -> if candidateDistance < l1Dist prevLocale vertex
-        then replaceVertexLocale (vertexRecordId vertex) l
-        else pure ()
+  lift <<$ updatePaintingIndex (fromSafe sPrid) (nextTry + totalTries)
 
-    -- let previousDistance = l1Dist (vertexRecordClosestLocale <<$ fromSafe vertex) vertex
-    -- if candidateDistance < previousDistance
-    --   then pure ()
-    --   else pure ()
-
-  -- minOn () vertices
-  -- insertPublicKeys pkgenId pubsWPaths
-  -- updateGeneratorIndex pkgenId (nextTry + totalTries)
-  --
-  -- found <- fmap (fromIntegral <<< length) <<$ getPublicKeys pkgenId
-  -- pure <<< Just <<$ GeneratePubKeysRes found
-
-  undefined
-  -- case mGenerator of
-  --   Nothing -> pure Nothing
-  --   Just (PublicKeyGenerator {..}, pkgenId) -> do
-
-  --
-  -- where
-  --   toInsertFormat (path, pub) = (pub, path)
+  updatedVertices <- lift <<$ retrievePaintingVertices (dim scty) sPrid
+  case classifyVertices updatedVertices of
+    LocalesComplete -> do
+      lift <<$ markPaintingFullyApproximated (fromSafe sPrid)
+      pure LocalesComplete
+    l -> pure l
 
 
--- generateWholeCanvasLogic :: CanvasGeneration r => SCanvas2 a m n -> Natural -> r (Either Text GenerateWholeCanvasRes)
--- generateWholeCanvasLogic (SCanvas2 (Canvas2 {..})) totalTries = do
---
+replaceVertexLocaleIfBetterApproximation :: Paintings s => [Safe VertexRecord a m n] -> SLocale a m n -> s ()
+replaceVertexLocaleIfBetterApproximation vertices l = do
+  let vertex = minOn (l1Dist l) vertices
+  let candidateDistance = l1Dist l vertex
+  let previousClosestLocale = vertexRecordClosestLocale <<$ fromSafe vertex
 
---
--- data GeneratePaintingCanvasRes = GeneratePaintingCanvasRes
---   { foundPaintingCoordinates :: Integer
---   , totalPaintingCoordinates :: Integer
---   } deriving (Eq, Show)
---
--- -- TODO: this isn't right.
--- generatePaintingCanvasLogic ::
---   forall r m n a. (CanvasGeneration r, KnownNats m n, SingI a)
---   => SAsset a
---   -> XPub
---   -> SCanvas2Id a m n
---   -> Painting2 a m n
---   -> Integer
---   -> Effectful (Interpreter r) (Either String GeneratePaintingCanvasRes)
--- generatePaintingCanvasLogic sAsset xpub scid@(SCanvas2Id cid) _ totalTries = do
---   i <- interpret <$> ask
---   i $ do
---     -- TODO: check origin address for sufficient funds
---     mCanvas2 <- sGetCanvas2 scid
---     case mCanvas2 of
---       Nothing -> pure $ Left "Canvas not found."
---       Just (SCanvas2 (Canvas2{..})) -> do
---         -- foundLocales <- getPlane2Locales scid
---
---         let nextTry = fromIntegral canvas2NextPathIndex
---         let tries = [nextTry .. nextTry + totalTries - 1]
---         let locales = catMaybes <<< fmap (deriveLocale sAsset xpub targetPlane) $ (pathsForIndices tries)
---
---         insertPlane2Locales sAsset scid locales
---         updateCanvas2NextPathIndex scid (nextTry + totalTries)
---
---         found :: [SLocale a m n] <- getPlane2Locales cid
---         pure <<< Right $ GeneratePaintingCanvasRes (fromIntegral <<< length <<$ found) totalCoordinates
---   where
---     targetPlane = canvas2Plane scid
---     (xs, ys) = plane2Dim targetPlane
---     totalCoordinates = xs * ys
---
---
--- data CoordinateHuntRes a m n = CoordinateHuntRes
---   { foundTargetedLocales :: [SLocale a m n]
---   , foundLocales :: [SLocale a m n]
---   , remainingTargetedCoordinates :: [SCoordinate2 m n]
---   }
---
--- multiCoordinateHunt :: XPub -> SAsset a -> [SCoordinate2 m n] -> Range Integer -> CoordinateHuntRes a m n
--- multiCoordinateHunt xpub sAsset targetCoordinates (Range startIndex endIndex) =
---   CoordinateHuntRes allFoundTargetedLocales allFoundLocales allRemainingTargetedCoordinates
---   where
---     tryPaths = pathsForIndices [startIndex .. endIndex]
---     allFoundLocales = mapMaybe (deriveLocale sAsset xpub P2) <<$ tryPaths
---     allFoundTargetedLocales = filter ((`elem` targetCoordinates) <<< lCoordinate) allFoundLocales
---     allRemainingTargetedCoordinates = targetCoordinates \\ fmap lCoordinate allFoundTargetedLocales
---
+  case previousClosestLocale of
+    Nothing -> replaceVertexLocale vertex l
+    Just prevLocale -> if candidateDistance < l1Dist prevLocale vertex
+      then replaceVertexLocale vertex l
+      else pure ()
+
+classifyVertices :: [Safe VertexRecord a m n] -> GenerateLocalesRes
+classifyVertices vertices = if (missingApproximations + imperfectApproximations > 0)
+    then LocalesImperfect missingApproximations imperfectApproximations totalVertices
+    else LocalesComplete
+  where
+    classifiedVertices = fmap classifyVertexRecord vertices
+    missingApproximations = fromIntegral <<< length <<$ filter (== NonExistent) classifiedVertices
+    imperfectApproximations = fromIntegral <<< length <<$ filter (== Approximate) classifiedVertices
+    totalVertices = fromIntegral <<< length <<$ classifiedVertices
 
 -- On average for a fair n-sided dice it takes n * sum_k=1^n 1/k
 estimateAttemptsNeededForEntireCanvas :: (Ord a, Floating a) => Plane2 m n -> Range a

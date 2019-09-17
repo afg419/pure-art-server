@@ -7,6 +7,7 @@ PaintingRecord
   ySize Word64
   xPub XPub -- extract to account
   nextPathIndex Word64 -- extract to generator for this painting
+  fullyApproximated Bool
   createdAt UTCTime
   updatedAt UTCTime
 
