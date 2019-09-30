@@ -7,36 +7,51 @@ import PointGen
 import Model
 import Effects.Paintings
 import Control.Monad.Trans.Except
-import Import hiding (undefined, sum, filter, elem)
+import Import hiding (undefined, sum, filter, elem, print)
 import Foundation
 import UnliftIO.Concurrent (threadDelay)
 import Effects.Interpreters
 import Effects.Common
 
-approximateVerticesLoop :: Handler ()
-approximateVerticesLoop = forever $ do
-  _ <- liftHandler <<< runEffects (run @PsqlDB) <<< liftEffectful $ do
+approximateVerticesLoop :: App -> IO ()
+approximateVerticesLoop app = forever $ do
+  print "running approximation"
+  _ <- liftEffectful @PsqlDB app $ do
     paintingEntities <- retrieveParitallyApproximatedPaintings
 
     for paintingEntities $ \paintingE -> do
-      withCanvasTy paintingE $ \(scty, sPaintingE) -> do
+      withCanvasTy (debug "paintingE: " paintingE) $ \(scty, sPaintingE) -> do
         approximateVerticesWithLocales scty sPaintingE 1000
 
-  threadDelay $ 1 * 10000000
+  threadDelay $ 1 * 1000000
 
 data GenerateLocalesRes =
-  LocalesComplete | LocalesImperfect Natural Natural Natural -- missing, imperfect, total
+  LocalesComplete | LocalesImperfect { total :: Natural, imperfect :: Natural, missing :: Natural } --total imerfect missing
+
+approximationReport :: [VertexRecordApproximation a m n] -> GenerateLocalesRes
+approximationReport vs = if perfectCount == total
+  then LocalesComplete
+  else LocalesImperfect total approxCount noCount
+  where
+    total = fromIntegral <<$ length vs
+
+    (perfects, imperfects) = partition ((== Perfect) <<< getApproximationQuality) vs
+    (nones, approxs) = partition ((== None) <<< getApproximationQuality) imperfects
+
+    perfectCount = fromIntegral <<$ length perfects
+    approxCount = fromIntegral <<$ length approxs
+    noCount = fromIntegral <<$ length nones
 
 approximateVerticesWithLocales ::
   forall a m n r. Paintings r
   => SCTY a m n
-  -> Safe (Entity PaintingRecord) a m n
+  -> SafeCTY a m n (Entity PaintingRecord)
   -> Natural
-  -> r (Either Text GenerateLocalesRes)
-approximateVerticesWithLocales scty sPrec totalTries = runExceptT $ do
-  let painting = fromSafe <<$ sEntityVal sPrec
-  let sPrid = sEntityKey sPrec
-  vertices <- lift <<$ retrievePaintingVertices (dim scty) sPrid
+  -> r GenerateLocalesRes
+approximateVerticesWithLocales scty sPrec totalTries = do
+  let painting = fromSafeCTY <<$ fmap entityVal sPrec
+  let sPrid = fmap entityKey sPrec
+  vertices <- retrievePaintingVertices (dim scty) sPrid
 
   let nextTry = fromIntegral (paintingRecordNextPathIndex painting)
   let tries = [nextTry .. nextTry + totalTries - 1]
@@ -45,39 +60,30 @@ approximateVerticesWithLocales scty sPrec totalTries = runExceptT $ do
 
   let locales = mapMaybe (deriveLocale scty xpub) pathsToTry
 
-  _ <- lift <<< for locales <<$ replaceVertexLocaleIfBetterApproximation vertices
+  _ <- for vertices <<$ replaceVertexLocaleIfBetterApproximation locales
 
-  lift <<$ updatePaintingIndex (fromSafe sPrid) (nextTry + totalTries)
+  updatePaintingIndex (fromSafeCTY sPrid) (nextTry + totalTries)
 
-  updatedVertices <- lift <<$ retrievePaintingVertices (dim scty) sPrid
-  case classifyVertices updatedVertices of
+  updatedVertices <- retrievePaintingVertices (dim scty) sPrid
+
+  let res = approximationReport updatedVertices
+  case res of
     LocalesComplete -> do
-      lift <<$ markPaintingFullyApproximated (fromSafe sPrid)
-      pure LocalesComplete
-    l -> pure l
+      markPaintingFullyApproximated <<$ fromSafeCTY sPrid
+      pure res
+    _ -> pure res
 
-
-replaceVertexLocaleIfBetterApproximation :: Paintings s => [Safe VertexRecord a m n] -> SLocale a m n -> s ()
-replaceVertexLocaleIfBetterApproximation vertices l = do
-  let vertex = minOn (l1Dist l) vertices
-  let candidateDistance = l1Dist l vertex
-  let previousClosestLocale = vertexRecordClosestLocale <<$ fromSafe vertex
-
-  case previousClosestLocale of
-    Nothing -> replaceVertexLocale vertex l
-    Just prevLocale -> if candidateDistance < l1Dist prevLocale vertex
-      then replaceVertexLocale vertex l
+replaceVertexLocaleIfBetterApproximation :: Paintings s => [SLocale a m n] -> VertexRecordApproximation a m n -> s ()
+replaceVertexLocaleIfBetterApproximation locales va =
+  case debug "here: " va of
+    PerfectRecord _ _ -> pure ()
+    NoRecord v -> replaceVertexLocale v localeClosestToVertex
+    ApproximateRecord v prevL -> if l1Dist va localeClosestToVertex < l1Dist va prevL
+      then replaceVertexLocale v localeClosestToVertex
       else pure ()
-
-classifyVertices :: [Safe VertexRecord a m n] -> GenerateLocalesRes
-classifyVertices vertices = if (missingApproximations + imperfectApproximations > 0)
-    then LocalesImperfect missingApproximations imperfectApproximations totalVertices
-    else LocalesComplete
   where
-    classifiedVertices = fmap classifyVertexRecord vertices
-    missingApproximations = fromIntegral <<< length <<$ filter (== NonExistent) classifiedVertices
-    imperfectApproximations = fromIntegral <<< length <<$ filter (== Approximate) classifiedVertices
-    totalVertices = fromIntegral <<< length <<$ classifiedVertices
+    localeClosestToVertex = minOn (l1Dist va) locales
+
 
 -- On average for a fair n-sided dice it takes n * sum_k=1^n 1/k
 estimateAttemptsNeededForEntireCanvas :: (Ord a, Floating a) => Plane2 m n -> Range a

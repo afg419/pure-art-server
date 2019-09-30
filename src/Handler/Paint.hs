@@ -17,9 +17,14 @@ import Data.Aeson
 
 postSubmitPaintR :: XPub -> Handler Value
 postSubmitPaintR xpub = do
-  submitPaintReq <- requireCheckJsonBody
-  eRes <- runEffects (run @PsqlDB) <<< liftEffectful <<$ submitPaintLogic xpub submitPaintReq
-  either (sendResponseStatus status500) (pure <<< toJSON) eRes
+  app <- getYesod
+  eSubmitPaintReq <- parseCheckJsonBody
+
+  case eSubmitPaintReq of
+    Error err -> pure $ String $ pack err
+    Success submitPaintReq -> do
+      eRes <-  flip runReaderT app <<< interpret (run @PsqlDB) <<$ submitPaintLogic xpub submitPaintReq
+      either (sendResponseStatus status500) (pure <<< toJSON) eRes
 
 submitPaintLogic :: Paintings s => XPub -> SubmitPaintReq -> s (Either Text SubmitPaintRes)
 submitPaintLogic xpub req = do
@@ -28,19 +33,21 @@ submitPaintLogic xpub req = do
         Left e -> pure <<< Left <<$ e
         Right sPainting2 -> do
           sPaintingId <- insertPainting scty xpub sPainting2
-          pure <<< Right <<< SubmitPaintRes <<< fromSafe <<$ sPaintingId
+          pure <<< Right <<< SubmitPaintRes <<< fromSafeCTY <<$ sPaintingId
 
 data SubmitPaintReq = SubmitPaintReq
   { submitImage :: Graph Coordinate2
   , submitAsset :: Asset
   , submitXSize :: Natural
   , submitYSize :: Natural
-  } deriving Generic
+  } deriving (Generic, Show)
+
+instance TwoDimensional SubmitPaintReq where
+  getX = fromIntegral <<< submitXSize
+  getY = fromIntegral <<< submitYSize
 
 instance CTY SubmitPaintReq where
-  ctyAsset = submitAsset
-  ctyX = fromIntegral <<< submitXSize
-  ctyY = fromIntegral <<< submitYSize
+  getAsset = submitAsset
 
 instance FromJSON SubmitPaintReq where
   parseJSON = withObject "submit painting request" $ \o -> do

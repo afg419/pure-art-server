@@ -4,29 +4,69 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE QuasiQuotes                #-}
+
 
 module Model where
 
 import ClassyPrelude.Yesod
-import Database.Persist.Quasi
 import PointGen
 import Import
+import           Database.Persist.Sql
 
-share [mkPersist sqlSettings, mkMigrate "migrateAll"]
-    $(persistFileWith lowerCaseSettings "config/models.persistentmodels")
+--------------------------------------------------------------------------------
+-- Models
+--------------------------------------------------------------------------------
 
-mkSafeVertex :: forall a m n. Plane2 m n -> VertexRecord -> Maybe (Safe VertexRecord a m n)
-mkSafeVertex p2 v@VertexRecord{..} = case mkCoordinate (getX v) (getY v) p2 of
-  Nothing -> Nothing
-  Just _ -> Just <<$ Safe v
+share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
+  PaintingRecord
+    asset Asset
+    xSize Word64
+    ySize Word64
+    xPub XPub -- extract to account
+    nextPathIndex Word64 -- extract to generator for this painting
+    fullyApproximated Bool
+    createdAt UTCTime
+    updatedAt UTCTime
+    deriving Show
 
-mkSafePainting :: forall a m n. SCTY a m n -> PaintingRecord -> Maybe (Safe PaintingRecord a m n)
-mkSafePainting scty p@PaintingRecord{..} = if scty `ctyEq` p
-  then Just <<$ Safe p
-  else Nothing
+  LocaleRecord
+    paintingRecordId PaintingRecordId
+    path DerivationPath
+    address Text
+    x Word64
+    y Word64
+    createdAt UTCTime
+    PaintingCoordinate paintingRecordId x y
+    deriving Show
 
-vertexRecordId :: Safe VertexRecord a m n -> VertexRecordId
-vertexRecordId (Safe VertexRecord{..}) =
+  VertexRecord
+    paintingRecordId PaintingRecordId
+    x Word64
+    y Word64
+    closestLocale LocaleRecordId Maybe
+    createdAt UTCTime
+    Primary paintingRecordId x y
+    deriving Show
+
+  EdgeRecord
+    paintingRecordId PaintingRecordId
+    fromX Word64
+    fromY Word64
+    toX Word64
+    toY Word64
+    createdAt UTCTime
+    Foreign VertexRecord from paintingRecordId fromX fromY
+    Foreign VertexRecord to paintingRecordId toX toY
+    deriving Show
+  |]
+
+
+mkSafePainting :: forall a m n. SCTY a m n -> PaintingRecord -> Maybe (SafeCTY a m n PaintingRecord)
+mkSafePainting = mkSafeCTY Equals
+
+getVertexRecordId :: VertexRecord -> VertexRecordId
+getVertexRecordId VertexRecord{..} =
   VertexRecordKey
     vertexRecordPaintingRecordId
     vertexRecordX
@@ -36,44 +76,47 @@ instance TwoDimensional LocaleRecord where
   getX = fromIntegral <<< localeRecordX
   getY = fromIntegral <<< localeRecordY
 
-instance TwoDimensional LocaleRecordId where
-  getX (LocaleRecordKey _ x _) = fromIntegral <<$ x
-  getY (LocaleRecordKey _ _ y) = fromIntegral <<$ y
-
 instance TwoDimensional VertexRecord where
   getX = fromIntegral <<< vertexRecordX
   getY = fromIntegral <<< vertexRecordY
-
-instance TwoDimensional (Safe VertexRecord a m n) where
-  getX = getX <<< fromSafe
-  getY = getY <<< fromSafe
 
 instance TwoDimensional VertexRecordId where
   getX (VertexRecordKey _ x _) = fromIntegral x
   getY (VertexRecordKey _ _ y) = fromIntegral y
 
+instance TwoDimensional PaintingRecord where
+  getX = fromIntegral <<< paintingRecordXSize
+  getY = fromIntegral <<< paintingRecordYSize
+
 instance CTY PaintingRecord where
-  ctyAsset = paintingRecordAsset
-  ctyX = fromIntegral <<< paintingRecordXSize
-  ctyY = fromIntegral <<< paintingRecordYSize
+  getAsset = paintingRecordAsset
 
+instance TwoDimensional (Entity PaintingRecord) where
+  getX = getX <<< entityVal
+  getY = getY <<< entityVal
 instance CTY (Entity PaintingRecord) where
-  ctyAsset = ctyAsset <<< entityVal
-  ctyX = ctyX <<< entityVal
-  ctyY = ctyY <<< entityVal
+  getAsset = getAsset <<< entityVal
 
-sEntityVal :: Safe (Entity record) a m n -> Safe record a m n
-sEntityVal = Safe <<< entityVal <<< fromSafe
+getVertexRecord :: VertexRecordApproximation a m n -> Safe2D m n VertexRecord
+getVertexRecord (PerfectRecord v _) = v
+getVertexRecord (ApproximateRecord v _) = v
+getVertexRecord (NoRecord v ) = v
 
-sEntityKey :: Safe (Entity record) a m n -> Safe (Key record) a m n
-sEntityKey = Safe <<< entityKey <<< fromSafe
+data VertexRecordApproximation (a :: Asset) (m :: Nat) (n :: Nat) where
+  PerfectRecord :: Safe2D m n VertexRecord -> SafeCTY a m n LocaleRecord -> VertexRecordApproximation a m n
+  ApproximateRecord :: Safe2D m n VertexRecord -> SafeCTY a m n LocaleRecord -> VertexRecordApproximation a m n
+  NoRecord :: Safe2D m n VertexRecord -> VertexRecordApproximation a m n
+instance Show (VertexRecordApproximation a m n) where
+  show = show <<< fromSafe2D <<< getVertexRecord
 
-data VertexApproximation = Perfect | Approximate | NonExistent deriving Eq
-classifyVertexRecord' :: VertexRecord -> VertexApproximation
-classifyVertexRecord' v = case vertexRecordClosestLocale v of
-  Nothing -> NonExistent
-  Just lrk -> if l1Dist lrk v == 0
-      then Perfect
-      else Approximate
-classifyVertexRecord :: Safe VertexRecord a m n -> VertexApproximation
-classifyVertexRecord = classifyVertexRecord' <<< fromSafe
+
+data ApproximationQuality = Perfect | Approx Natural | None deriving Eq
+getApproximationQuality :: VertexRecordApproximation a m n -> ApproximationQuality
+getApproximationQuality (PerfectRecord _ _) = Perfect
+getApproximationQuality (ApproximateRecord v l) = Approx <<$ l1Dist v l
+getApproximationQuality (NoRecord _) = None
+
+
+instance TwoDimensional (VertexRecordApproximation a m n) where
+  getX = getX <<< getVertexRecord
+  getY = getY <<< getVertexRecord

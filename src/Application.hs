@@ -51,6 +51,9 @@ import Daemons.CanvasGeneration
 -- comments there for more details.
 mkYesodDispatch "App" resourcesApp
 
+getHelloR :: Handler Text
+getHelloR = pure "fuck you"
+
 -- | This function allocates resources (such as a database connection pool),
 -- performs initialization and returns a foundation datatype value. This is also
 -- the place to put your migrate statements to have automatic database
@@ -123,6 +126,7 @@ warpSettings foundation =
             (toLogStr $ "Exception from Warp: " ++ show e))
       defaultSettings
 
+
 getApplicationDev :: IO (Settings, Application)
 getApplicationDev = do
     settings <- getAppSettings
@@ -148,15 +152,20 @@ appMain = do
 
         -- allow environment variables to override
         useEnv
-
+    print $ appPort settings
+    print $ appHost settings
     -- Generate the foundation from the settings
     foundation <- makeFoundation settings
 
     -- Generate a WAI Application from the foundation
     app <- makeApplication foundation
 
+    print $ getPort $ warpSettings foundation
+
     -- Try to complete all paintings
-    _ <- forkIO $ unsafeHandler foundation approximateVerticesLoop
+    _ <- forkIO $ approximateVerticesLoop foundation
+
+
 
     -- Run the application with Warp
     runSettings (warpSettings foundation) app
@@ -166,6 +175,7 @@ appMain = do
 --------------------------------------------------------------
 -- Functions for DevelMain.hs (a way to run the app from GHCi)
 --------------------------------------------------------------
+
 getApplicationRepl :: IO (Int, App, Application)
 getApplicationRepl = do
     settings <- getAppSettings

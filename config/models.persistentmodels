@@ -18,12 +18,17 @@ LocaleRecord
   x Word64
   y Word64
   createdAt UTCTime
-  Primary paintingRecordId x y
+  PaintingCoordinate paintingRecordId x y
 
 EdgeRecord
-  from VertexRecordId
-  to VertexRecordId
+  paintingRecordId PaintingRecordId
+  fromX Word64
+  fromY Word64
+  toX Word64
+  toY Word64
   createdAt UTCTime
+  Foreign VertexRecord from paintingRecordId fromX fromY
+  Foreign VertexRecord to paintingRecordId toX toY
 
 VertexRecord
   paintingRecordId PaintingRecordId

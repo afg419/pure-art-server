@@ -28,13 +28,13 @@ instance Ord (SCoordinate2 m n) where -- instance used for nubbing localeRecords
       then y1 <= y2
       else False
 
-class TwoDimensional c where
-  getX :: c -> Natural
-  getY :: c -> Natural
-
 l1Dist :: (TwoDimensional c, TwoDimensional d) => c -> d -> Natural
-l1Dist c d = abs (getX c - getX d) + abs (getY c - getY d)
-
+l1Dist c d = fromIntegral <<$ abs (getXInt c - getXInt d) + abs (getYInt c - getYInt d)
+  where
+    getXInt :: TwoDimensional e => e -> Integer
+    getXInt  = toInteger <<< getX
+    getYInt :: TwoDimensional e => e -> Integer
+    getYInt = toInteger <<< getY
 
 instance TwoDimensional Coordinate2 where
   getX = fst

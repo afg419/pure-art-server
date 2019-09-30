@@ -12,7 +12,6 @@ module Foundation where
 
 import Import.NoFoundation
 import PointGen
-import Model
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
 import Control.Monad.Logger (LogSource)
 import Yesod.Core.Types     (Logger)

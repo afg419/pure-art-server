@@ -7,4 +7,8 @@
 
 -- /paint/#XPub/save SavePaintR POST
 -- !/paint/#XPub/#PaintingRecordId RetrievePaintR GET
+
 /paint/#XPub/submit SubmitPaintR POST
+/paint/#XPub/retrieve/#PaintingRecordId RetrievePaintR GET
+
+/ HelloR GET

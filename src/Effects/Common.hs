@@ -1,20 +1,22 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Effects.Common where
 
-import Import
 import Foundation
--- a wrapper for an interpreter from s to Handler
-newtype Interpreter s = Interpreter { interpret :: forall a t. MonadTrans t => s a -> t Handler a }
+import Import
 
--- The type class of a monad interpretable into Handler
+data Interpreter s where
+  Interpreter :: (forall a m. (MonadReader App m, MonadIO m) => s a -> m a) -> Interpreter s
+
+interpret :: Interpreter s -> (forall a m. (MonadIO m) => s a -> ReaderT App m a)
+interpret (Interpreter nat) = nat
+
+-- The type class of a monad interpretable into (ReaderT App m a)
 class Monad s => Effect s where
   run :: Interpreter s
 
--- interpreters will consist of a tuple of Interpreters. These will be read
--- and used to interpret various Effect monads into Handler
-type Effectful interpreters = ReaderT interpreters Handler
-
-runEffects :: interpreters -> Effectful interpreters a -> Handler a
-runEffects e eff = flip runReaderT e $ eff
-
-liftEffectful :: Effect s => s a -> Effectful (Interpreter s) a
-liftEffectful = interpret $ run
+liftEffectful :: forall s a m. (Effect s, MonadIO m) => App -> s a -> m a
+liftEffectful app = flip runReaderT app <<< interpret run

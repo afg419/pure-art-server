@@ -2,7 +2,6 @@ name:    pure-art-server
 version: "0.0.0"
 
 dependencies:
-
 - base
 - yesod
 - yesod-core
@@ -84,6 +83,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -fdefer-typed-holes
     dependencies:
     - pure-art-server
     when:
@@ -95,7 +95,9 @@ tests:
   pure-art-server-test:
     main: Spec.hs
     source-dirs: test
-    ghc-options: -Wall
+    ghc-options:
+    - -Wall
+    - -fdefer-typed-holes
     dependencies:
     - pure-art-server
     - hspec

@@ -4,6 +4,14 @@ import Import
 import Data.Proxy
 import GHC.TypeNats
 
+class TwoDimensional c where
+  getX :: c -> Natural
+  getY :: c -> Natural
+
+instance TwoDimensional (Plane2 m n) where
+  getX = fst <<< dimensions
+  getY = snd <<< dimensions
+
 dimensions :: forall m n. Plane2 m n -> (Natural, Natural)
 dimensions P2 = (fromIntegral <<< natVal $ Proxy @m, fromIntegral <<< natVal $ Proxy @n)
 
