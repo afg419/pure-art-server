@@ -3,7 +3,6 @@
 module PointGen.Address where
 
 import qualified Crypto.HDTree.Address as Crypto
-import Import
 import PointGen.Asset
 
 data Address (a :: Asset) where

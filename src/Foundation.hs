@@ -11,6 +11,7 @@
 module Foundation where
 
 import Import.NoFoundation
+import PointGen
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
 import Control.Monad.Logger (LogSource)
 import Yesod.Core.Types     (Logger)
@@ -105,6 +106,7 @@ instance YesodPersist App where
     runDB action = do
         master <- getYesod
         runSqlPool action $ appConnPool master
+
 
 instance YesodPersistRunner App where
     getDBRunner :: Handler (DBRunner App, Handler ())

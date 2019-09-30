@@ -20,10 +20,12 @@ module Application
     , db
     ) where
 
+import Control.Concurrent                   (forkIO)
 import Control.Monad.Logger                 (liftLoc, runLoggingT)
 import Database.Persist.Postgresql          (createPostgresqlPool, pgConnStr,
                                              pgPoolSize, runSqlPool)
 import Import
+import Foundation
 import Language.Haskell.TH.Syntax           (qLocation)
 import Network.HTTP.Client.TLS              (getGlobalManager)
 import Network.Wai (Middleware)
@@ -40,14 +42,17 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
-import Handler.Canvas
 import Handler.Paint
 import Model
+import Daemons.CanvasGeneration
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
 -- comments there for more details.
 mkYesodDispatch "App" resourcesApp
+
+getHelloR :: Handler Text
+getHelloR = pure "fuck you"
 
 -- | This function allocates resources (such as a database connection pool),
 -- performs initialization and returns a foundation datatype value. This is also
@@ -121,6 +126,7 @@ warpSettings foundation =
             (toLogStr $ "Exception from Warp: " ++ show e))
       defaultSettings
 
+
 getApplicationDev :: IO (Settings, Application)
 getApplicationDev = do
     settings <- getAppSettings
@@ -146,19 +152,30 @@ appMain = do
 
         -- allow environment variables to override
         useEnv
-
+    print $ appPort settings
+    print $ appHost settings
     -- Generate the foundation from the settings
     foundation <- makeFoundation settings
 
     -- Generate a WAI Application from the foundation
     app <- makeApplication foundation
 
+    print $ getPort $ warpSettings foundation
+
+    -- Try to complete all paintings
+    _ <- forkIO $ approximateVerticesLoop foundation
+
+
+
     -- Run the application with Warp
     runSettings (warpSettings foundation) app
+
+
 
 --------------------------------------------------------------
 -- Functions for DevelMain.hs (a way to run the app from GHCi)
 --------------------------------------------------------------
+
 getApplicationRepl :: IO (Int, App, Application)
 getApplicationRepl = do
     settings <- getAppSettings

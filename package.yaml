@@ -2,7 +2,6 @@ name:    pure-art-server
 version: "0.0.0"
 
 dependencies:
-
 - base
 - yesod
 - yesod-core
@@ -52,9 +51,10 @@ dependencies:
 - quickcheck-assertions
 - haskoin-core
 - comonad
-- vector-sized
 - finite-typelits
 - mtl
+- transformers
+- unliftio
 
 # The library contains all of our application code. The executable
 # defined below is just a thin wrapper.
@@ -83,6 +83,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -fdefer-typed-holes
     dependencies:
     - pure-art-server
     when:
@@ -94,7 +95,9 @@ tests:
   pure-art-server-test:
     main: Spec.hs
     source-dirs: test
-    ghc-options: -Wall
+    ghc-options:
+    - -Wall
+    - -fdefer-typed-holes
     dependencies:
     - pure-art-server
     - hspec

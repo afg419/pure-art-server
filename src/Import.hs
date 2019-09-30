@@ -2,16 +2,18 @@ module Import
     ( module Import
     ) where
 
-import Foundation            as Import
 import Import.NoFoundation   as Import hiding (all, length, (\\), zip, id, head, Proxy)
 import Control.Category      as Import hiding (id)
 import GHC.Read as Import
-import GHC.Generics as Import
+import GHC.Generics as Import hiding (from, to)
 import Data.Singletons.TypeLits as Import
 import GHC.Natural as Import
 import GHC.Word as Import
 import qualified Data.Foldable as F
 import Data.Ord      (comparing)
+
+fgmap :: (Functor f, Functor g) => (a -> b) -> g (f a) -> g (f b)
+fgmap = fmap >>> fmap
 
 minOn :: (F.Foldable t, Ord a) => (b -> a) -> t b -> b
 minOn = F.minimumBy <<< comparing
