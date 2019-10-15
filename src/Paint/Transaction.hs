@@ -43,7 +43,7 @@ instance ToJSON v => ToJSON (TxScaffold v) where
 
 
 data InputScaffold v where
-  InputScaffold :: { prevTxid :: TxScaffoldId v, vout :: Integer, from :: v } -> InputScaffold v
+  InputScaffold :: { scaffoldPrevTxid :: TxScaffoldId v, scaffoldVout :: Integer, scaffoldFrom :: v } -> InputScaffold v
   InitInputScaffold :: v -> InputScaffold v
 deriving instance Eq v => Eq (InputScaffold v)
 deriving instance Show v => Show (InputScaffold v)

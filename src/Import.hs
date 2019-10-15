@@ -54,6 +54,13 @@ bToM test a = if test a
   then Just a
   else Nothing
 
+both :: Bifunctor p => (a -> b) -> p a a -> p b b
+both f = first f <<< second f
+
+bothPresent :: (Maybe a, Maybe b) -> Maybe (a, b)
+bothPresent (Just a, Just b) = Just (a, b)
+bothPresent _ = Nothing
+
 debug :: Show a => String -> a -> a
 debug s a = trace (s <> show a) a
 

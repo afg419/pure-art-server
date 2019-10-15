@@ -13,6 +13,7 @@ import ClassyPrelude.Yesod
 import PointGen
 import Import
 import           Database.Persist.Sql
+import Data.Maybe (fromJust)
 
 --------------------------------------------------------------------------------
 -- Models
@@ -23,8 +24,8 @@ share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
     asset Asset
     xSize Word64
     ySize Word64
-    xPub XPub -- extract to account
-    nextPathIndex Word64 -- extract to generator for this painting
+    xPub XPub
+    nextPathIndex Word64
     fullyApproximated Bool
     createdAt UTCTime
     updatedAt UTCTime
@@ -109,7 +110,6 @@ data VertexRecordApproximation (a :: Asset) (m :: Nat) (n :: Nat) where
 instance Show (VertexRecordApproximation a m n) where
   show = show <<< fromSafe2D <<< getVertexRecord
 
-
 data ApproximationQuality = Perfect | Approx Natural | None deriving Eq
 getApproximationQuality :: VertexRecordApproximation a m n -> ApproximationQuality
 getApproximationQuality (PerfectRecord _ _) = Perfect
@@ -120,3 +120,16 @@ getApproximationQuality (NoRecord _) = None
 instance TwoDimensional (VertexRecordApproximation a m n) where
   getX = getX <<< getVertexRecord
   getY = getY <<< getVertexRecord
+
+mkSLocale :: SCTY a m n -> LocaleRecord -> Maybe (SLocale a m n)
+mkSLocale scty (l@LocaleRecord{..}) = fmap toReturn safe
+  where
+    x = fromIntegral localeRecordX
+    y = fromIntegral localeRecordY
+
+    asset = sAsset scty
+    mAddress = parseAddress asset localeRecordAddress
+    mCoordinate = mkCoordinate x y (dim scty)
+    safe = bothPresent (mAddress, mCoordinate)
+
+    toReturn (a,c) = SLocale c a localeRecordPath

@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Handler.Paint where
+module Handler.RetrievePaint where
 
 import Import hiding (undefined, natVal)
 import Foundation
@@ -15,53 +15,22 @@ import Paint
 import Model
 import Data.Aeson
 
-postSubmitPaintR :: XPub -> Handler Value
-postSubmitPaintR xpub = do
+getRetrievePaintR :: XPub -> PaintingRecordId -> Handler Value
+getRetrievePaintR xpub prid = do
   app <- getYesod
-  eSubmitPaintReq <- parseCheckJsonBody
+  pure _
 
-  case eSubmitPaintReq of
-    Error err -> pure $ String $ pack err
-    Success submitPaintReq -> do
-      eRes <-  flip runReaderT app <<< interpret (run @PsqlDB) <<$ submitPaintLogic xpub submitPaintReq
-      either (sendResponseStatus status500) (pure <<< toJSON) eRes
+data RetrievePaintRes v = RetrievePaintRes
+  { retrieveScaffold :: [TxScaffold (BranchCounter v)] }
 
-submitPaintLogic :: Paintings s => XPub -> SubmitPaintReq -> s (Either Text SubmitPaintRes)
-submitPaintLogic xpub req = do
-    withCanvasTy req $ \(scty,_) -> do
-      case mToE "vertices oob" <<< fmap SPainting2 <<$ mkSGraph (dim scty) (submitImage req) of
-        Left e -> pure <<< Left <<$ e
-        Right sPainting2 -> do
-          sPaintingId <- insertPainting scty xpub sPainting2
-          pure <<< Right <<< SubmitPaintRes <<< fromSafeCTY <<$ sPaintingId
+retrievePaintLogic :: Paintings s => XPub -> PaintingRecordId -> s (Either Text (RetrievePaintRes LocaleRecord))
+retrievePaintLogic xpub prid = do
+  mPainting <- retrievePainting prid
+  case mPainting of
+    Nothing -> pure <<< Left <<$ "Painting Record Not Found"
+    Just p -> pure _
 
-data SubmitPaintReq = SubmitPaintReq
-  { submitImage :: Graph Coordinate2
-  , submitAsset :: Asset
-  , submitXSize :: Natural
-  , submitYSize :: Natural
-  } deriving (Generic, Show)
-
-instance TwoDimensional SubmitPaintReq where
-  getX = fromIntegral <<< submitXSize
-  getY = fromIntegral <<< submitYSize
-
-instance CTY SubmitPaintReq where
-  getAsset = submitAsset
-
-instance FromJSON SubmitPaintReq where
-  parseJSON = withObject "submit painting request" $ \o -> do
-    submitImage <- o .: "image"
-    submitXSize <- o .: "xSize"
-    submitYSize <- o .: "ySize"
-    submitAsset <- o .: "asset"
-    pure SubmitPaintReq{..}
-
-newtype SubmitPaintRes = SubmitPaintRes { submitPaintingId :: PaintingRecordId }
-
-instance ToJSON SubmitPaintRes where
-  toJSON res = object [ "paintingId" .= submitPaintingId res ]
-
+-- submitPaintLogic :: Paintings
 
 
 -- postSavePaintR :: XPub -> Handler Value

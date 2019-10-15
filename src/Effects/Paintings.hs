@@ -9,7 +9,8 @@ import Paint
 import Effects.Common
 import Effects.Interpreters
 import Database.Persist
-import Import hiding (undefined)
+import qualified Database.Esqueleto as ESQL
+import Import hiding (undefined, (==.), (=.), on, update)
 import Data.Maybe (fromJust)
 
 data SPainting2 (m :: Nat) (n :: Nat) = SPainting2 (Graph (SCoordinate2 m n))
@@ -21,13 +22,42 @@ instance ToJSON Painting2 where
 class Effect s => Paintings s where
   insertPainting :: SCTY a m n -> XPub -> SPainting2 m n -> s (SafeCTY a m n PaintingRecordId)
   retrievePaintingVertices :: Plane2 m n -> SafeCTY a m n PaintingRecordId -> s [VertexRecordApproximation a m n]
-  retrievePainting :: SCTY a m n -> SafeCTY a m n PaintingRecordId -> s (Either Text (SafeCTY a m n PaintingRecord))
+  retrievePainting :: PaintingRecordId -> s (Maybe PaintingRecord)
+  retrievePaintingEdges :: SCTY a m n -> SafeCTY a m n (Entity PaintingRecord) -> s [Edge (SLocale a m n)]
   updatePaintingIndex :: PaintingRecordId -> Natural -> s ()
   markPaintingFullyApproximated :: PaintingRecordId -> s ()
   retrieveParitallyApproximatedPaintings :: s [Entity PaintingRecord]
   replaceVertexLocale :: Safe2D m n VertexRecord -> SLocale a m n -> s ()
 
+
 instance Paintings PsqlDB where
+  retrievePaintingEdges scty sEntity = PsqlDB $ do
+    let prid = entityKey <<< fromSafeCTY <<$ sEntity
+
+    es <- selectList [ EdgeRecordPaintingRecordId ==. prid] []
+    vs <- selectList [ VertexRecordPaintingRecordId ==. prid] []
+    ls <- selectList [ LocaleRecordPaintingRecordId ==. prid] []
+
+    pure <<$ mapMaybe (toEdge scty vs ls <<< entityVal) es
+    where
+      findVertices :: [Entity VertexRecord] -> EdgeRecord -> (Maybe VertexRecord, Maybe VertexRecord)
+      findVertices vRecords e = let
+          fromV = find (\v -> edgeRecordFrom e == entityKey v) vRecords
+          toV = find (\v -> edgeRecordTo e == entityKey v) vRecords
+        in
+        (fromV, toV) $>> both (fmap entityVal)
+
+      findClosestLocale :: [Entity LocaleRecord] -> VertexRecord -> Maybe LocaleRecord
+      findClosestLocale lRecords v = find ( \l -> Just (entityKey l) == vertexRecordClosestLocale v) lRecords
+        $>> fmap entityVal
+
+      toEdge :: SCTY a m n -> [Entity VertexRecord] -> [Entity LocaleRecord] -> EdgeRecord -> Maybe (Edge (SLocale a m n))
+      toEdge scty' vRecords lRecords e =
+        findVertices vRecords e
+          $>> both (>>= findClosestLocale lRecords >=> mkSLocale scty')
+          >>> bothPresent
+          >>> fmap (uncurry Edge)
+
   insertPainting scty xpub (SPainting2 g@(Graph es)) = PsqlDB $ do
     now <- liftIO getCurrentTime
 
@@ -55,11 +85,7 @@ instance Paintings PsqlDB where
             then pure <<$ PerfectRecord v locale
             else pure <<$ ApproximateRecord v locale
 
-  retrievePainting scty sPrecId = PsqlDB $ do
-    mPainting <- get (fromSafeCTY sPrecId)
-    case mPainting of
-      Nothing -> Left "Painting not found" $>> pure
-      Just p -> mkSafePainting scty p $>> mToE "Painting cty does not match" >>> pure
+  retrievePainting prid = PsqlDB $ get prid
 
   updatePaintingIndex precId nextIndex = [PaintingRecordNextPathIndex =. (fromIntegral nextIndex)]
     $>> update precId

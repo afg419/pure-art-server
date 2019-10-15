@@ -30,8 +30,8 @@ prop_starTreeToScaffold2_DisconnectedTrees = quickCheck $ do
   pure $   outs hotScaffold === [sSrc c1, sSrc c2]
       .&&. outs c1Scaffold === rayTgts c1
       .&&. outs c2Scaffold === rayTgts c2
-      .&&. (from $ input c1Scaffold) === sSrc c1
-      .&&. (from $ input c2Scaffold) === sSrc c2
+      .&&. (scaffoldFrom $ input c1Scaffold) === sSrc c1
+      .&&. (scaffoldFrom $ input c2Scaffold) === sSrc c2
 
 prop_starTreeToScaffold3_LengthenedTree :: IO ()
 prop_starTreeToScaffold3_LengthenedTree = quickCheck $ do
