@@ -1,9 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module PointGen.Coordinate where
@@ -11,44 +8,23 @@ module PointGen.Coordinate where
 import PointGen.Plane
 import Import
 
-type KnownNats m n = (KnownNat m, KnownNat n)
+data Coordinate = C Natural Natural deriving (Show, Eq)
+instance TwoDimensional Coordinate where
+  getX (C x _) = x
+  getY (C _ y) = y
 
-type Coordinate2 = (Natural, Natural)
+-- instance used for nubbing localeRecords in O(n*log(n)) time
+-- this is not a total ordering, as p1 <= p2 and p2 <= p1 may be false.
+instance Ord Coordinate where
+   C x1 y1 <=  C x2 y2 = (x1 <= x2) && (y1 <= y2)
 
-data SCoordinate2 (m :: Nat) (n :: Nat) where
-  SCoordinate2 :: KnownNats m n => { cx :: Natural, cy :: Natural } -> SCoordinate2 m n
+type SCoordinate (m :: Nat) (n :: Nat) = ValidForPlane m n Coordinate
 
-instance Show (SCoordinate2 m n) where
-  show SCoordinate2{..} = pack $ "(x:" <> show cx <> ", y:"<> show cy <>")"
-deriving instance Eq (SCoordinate2 m n)
-
-instance Ord (SCoordinate2 m n) where -- instance used for nubbing localeRecords in O(n*log(n)) time
-  SCoordinate2 x1 y1 <= SCoordinate2 x2 y2 =
-    if x1 <= x2
-      then y1 <= y2
-      else False
-
-l1Dist :: (TwoDimensional c, TwoDimensional d) => c -> d -> Natural
-l1Dist c d = fromIntegral <<$ abs (getXInt c - getXInt d) + abs (getYInt c - getYInt d)
-  where
-    getXInt :: TwoDimensional e => e -> Integer
-    getXInt  = toInteger <<< getX
-    getYInt :: TwoDimensional e => e -> Integer
-    getYInt = toInteger <<< getY
-
-instance TwoDimensional Coordinate2 where
-  getX = fst
-  getY = snd
-
-instance TwoDimensional (SCoordinate2 m n) where
-  getX = cx
-  getY = cy
-
-mkCoordinate :: forall m n. Natural -> Natural -> Plane2 m n -> Maybe (SCoordinate2 m n)
-mkCoordinate x' y' P2 = if xValid && yValid
-  then Just $ SCoordinate2 x' y'
+mkSafeCoordinate :: TwoDimensional s => Plane m n -> s -> Maybe (ValidForPlane m n s)
+mkSafeCoordinate p2@P2 d2 = if xValid && yValid
+  then Just $ ValidForPlane d2
   else Nothing
   where
-    (xSize, ySize) = dimensions (P2 @m @n)
-    xValid = 0 <= x' && x' <= xSize `minusNatural` 1
-    yValid = 0 <= y' && y' <= ySize `minusNatural` 1
+    (sizeX, sizeY) = dimensions p2
+    xValid = 0 <= getX d2 && getX d2 <= sizeX `minusNatural` 1
+    yValid = 0 <= getY d2 && getY d2 <= sizeY `minusNatural` 1

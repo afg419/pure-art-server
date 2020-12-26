@@ -10,7 +10,6 @@ import Data.Singletons.TypeLits as Import
 import GHC.Natural as Import
 import GHC.Word as Import
 import qualified Data.Foldable as F
-import Data.Ord      (comparing)
 
 fgmap :: (Functor f, Functor g) => (a -> b) -> g (f a) -> g (f b)
 fgmap = fmap >>> fmap

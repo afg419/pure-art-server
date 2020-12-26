@@ -20,7 +20,7 @@ approximateVerticesLoop app = forever $ do
     paintingEntities <- retrieveParitallyApproximatedPaintings
 
     for paintingEntities $ \paintingE -> do
-      withCanvasTy (debug "paintingE: " paintingE) $ \(scty, sPaintingE) -> do
+      withContext (debug "paintingE: " paintingE) $ \(scty, sPaintingE) -> do
         approximateVerticesWithLocales scty sPaintingE 1000
 
   threadDelay $ 1 * 1000000
@@ -44,8 +44,8 @@ approximationReport vs = if perfectCount == total
 
 approximateVerticesWithLocales ::
   forall a m n r. Paintings r
-  => SCTY a m n
-  -> SafeCTY a m n (Entity PaintingRecord)
+  => SContext a m n
+  -> ValidForContext a m n (Entity PaintingRecord)
   -> Natural
   -> r GenerateLocalesRes
 approximateVerticesWithLocales scty sPrec totalTries = do
@@ -86,7 +86,7 @@ replaceVertexLocaleIfBetterApproximation locales va =
 
 
 -- On average for a fair n-sided dice it takes n * sum_k=1^n 1/k
-estimateAttemptsNeededForEntireCanvas :: (Ord a, Floating a) => Plane2 m n -> Range a
+estimateAttemptsNeededForEntireCanvas :: (Ord a, Floating a) => Plane m n -> Range a
 estimateAttemptsNeededForEntireCanvas p = mkRange (diceSides * lowBoundSum) (diceSides * highBoundSum)
   where
     (m,n) = dimensions p
@@ -95,7 +95,7 @@ estimateAttemptsNeededForEntireCanvas p = mkRange (diceSides * lowBoundSum) (dic
     highBoundSum = 1 + log(diceSides)
 --
 
-estimateAttemptsNeeded2 :: Plane2 m n -> Double
+estimateAttemptsNeeded2 :: Plane m n -> Double
 estimateAttemptsNeeded2 p = fromRational $ (toRational diceSides) * (sum <<< fmap (\i -> 1/(toRational i)) $ [1..diceSides])
   where
     (m,n) = dimensions p

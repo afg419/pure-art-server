@@ -1,5 +1,4 @@
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -19,15 +18,15 @@ import Data.Maybe
 import Import
 import Data.Proxy
 
-hotLocale :: SCTY a m n -> XPub -> SLocale a m n
+hotLocale :: SContext a m n -> XPub -> SLocale a m n
 hotLocale cty xpub = deriveLocale cty xpub hotPath $>> fromJust
 
 --------------------------------------------------------------------------------
 -- FibrePlane represents the abstract space of all addresses understood geometrically
 --------------------------------------------------------------------------------
 
-type FibrePlane = Plane2 MaxHashSize MaxHashSize
-type FibreCoordinate = SCoordinate2 MaxHashSize MaxHashSize
+type FibrePlane = Plane MaxHashSize MaxHashSize
+type FibreCoordinate = SCoordinate MaxHashSize MaxHashSize
 type MaxHashSize = 2^256
 
 maxHashSize :: Natural
@@ -40,7 +39,7 @@ addressTransform :: Address a -> FibreCoordinate
 addressTransform = textProject <<< pack <<< show
 
 textProject :: Text -> FibreCoordinate
-textProject t = fromJust $ mkCoordinate xCoord yCoord P2
+textProject t = fromJust $ mkSafeCoordinate P2 $ C xCoord yCoord
   where
     baseToHash = t <> t -- double the initial text
     xBase = pack "x" <> baseToHash
@@ -61,14 +60,14 @@ hashToNatural = words8sToNatural <<< BA.unpack <<< Crypto.hash256 <<< encodeUtf8
 --------------------------------------------------------------------------------
 
 data SLocale (a :: Asset) (m :: Nat) (n :: Nat) = SLocale
-  { lCoordinate :: SCoordinate2 m n
+  { lCoordinate :: SCoordinate m n
   , lAddress :: Address a
   , lPath :: DerivationPath
   } deriving (Show, Eq)
 
 instance ToJSON (SLocale a m n) where
   toJSON SLocale{..} = object
-    [ "coordinate" .= [cx lCoordinate, cy lCoordinate]
+    [ "coordinate" .= [getX lCoordinate, getY lCoordinate]
     , "address" .= tshow lAddress
     , "path" .= tshow lPath
     ]
@@ -79,7 +78,7 @@ instance TwoDimensional (SLocale a m n) where
   getX = getX <<< lCoordinate
   getY = getY <<< lCoordinate
 
-deriveLocale :: SCTY a m n -> XPub -> DerivationPath -> Maybe (SLocale a m n)
+deriveLocale :: SContext a m n -> XPub -> DerivationPath -> Maybe (SLocale a m n)
 deriveLocale cty xpub dpath = scaleLocale (dim cty) <$> deriveFibreLocale (sAsset cty) xpub dpath
 
 type FibreLocale a = SLocale a MaxHashSize MaxHashSize
@@ -90,7 +89,7 @@ deriveFibreLocale sa xpub dpath = do
   let coordinate = addressTransform address
   pure $ SLocale coordinate address dpath
 
-scaleLocale :: Plane2 m2 n2 -> SLocale a m1 n1 -> SLocale a m2 n2
+scaleLocale :: Plane m2 n2 -> SLocale a m1 n1 -> SLocale a m2 n2
 scaleLocale p2 locale = locale{ lCoordinate = scaledCoordinate }
   where
     scaledCoordinate = projectTo p2 $ lCoordinate locale

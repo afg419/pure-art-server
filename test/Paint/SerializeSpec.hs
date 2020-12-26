@@ -13,7 +13,7 @@ import PointGen
 
 -- prop_starTreeScaffoldSerialization :: IO ()
 -- prop_starTreeScaffoldSerialization = quickCheck $ do
---   star :: Star (Coordinate2) <- arbitrary
+--   star :: Star (Coordinate) <- arbitrary
 --   let starGraph = toGraph star
 --
 --   let counterTree = graphToTxScaffold (0,0) starGraph

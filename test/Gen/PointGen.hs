@@ -12,22 +12,22 @@ import Data.Maybe
 instance Arbitrary Natural where
   arbitrary = fmap B.toNatural <<$ (arbitrary :: Gen Word64)
 
-stockLeqThan :: (Natural, Natural) -> Plane2 m n -> Bool
+stockLeqThan :: (Natural, Natural) -> Plane m n -> Bool
 stockLeqThan (x,y) targetPlane = withPlaneTy (x,y) (`leqDimensionsThan` targetPlane)
 
-withRandomPlane :: ((Natural, Natural) -> Bool) -> (forall m n. Plane2 m n -> Gen s) -> Gen s
+withRandomPlane :: ((Natural, Natural) -> Bool) -> (forall m n. Plane m n -> Gen s) -> Gen s
 withRandomPlane xyHasProp s = do
   (x, y) <- arbitrary `suchThat` xyHasProp
   withPlaneTy (x, y) s
 
-withRandomCoordinate :: (forall m n. SCoordinate2 m n -> Gen s) -> Gen s
+withRandomCoordinate :: (forall m n. SCoordinate m n -> Gen s) -> Gen s
 withRandomCoordinate s = withRandomPlane (const True) (genCoordinate >=> s)
 
-genCoordinate :: Plane2 m n -> Gen (SCoordinate2 m n)
+genCoordinate :: Plane m n -> Gen (SCoordinate m n)
 genCoordinate targetPlane = fmap (projectTo targetPlane) $ genFibreCoordinate
 
-genSubplaneCoordinate :: forall m n. SubPlane2 m n -> Gen (SCoordinate2 m n)
-genSubplaneCoordinate sp@(SubPlane2 (SCoordinate2 _ _) _) = do
+genSubplaneCoordinate :: forall m n. SubPlane2 m n -> Gen (SCoordinate m n)
+genSubplaneCoordinate sp@(SubPlane2 (SCoordinate _ _) _) = do
   let (dimX, dimY) = subplane2Dim sp
   let (shiftX, shiftY) = subplane2Translate sp
 
@@ -37,7 +37,7 @@ genSubplaneCoordinate sp@(SubPlane2 (SCoordinate2 _ _) _) = do
   let genX = genXOrigin + shiftX
   let genY = genYOrigin + shiftY
 
-  pure <<< fromJust $ (mkCoordinate genX genY P2) >>= bToM (`inSubPlane` sp)
+  pure <<< fromJust $ (mkSafeCoordinate P2 $ C genX genY) >>= bToM (`inSubPlane` sp)
 
 genFibreCoordinate :: Gen FibreCoordinate
 genFibreCoordinate = do
@@ -54,4 +54,4 @@ genFibreCoordinate = do
   w64_4_y <- arbitrary
 
   let geny = B.toNatural $ B.Word256 w64_1_y w64_2_y w64_3_y w64_4_y
-  pure <<< fromJust $ mkCoordinate genx geny fibrePlane
+  pure <<< fromJust $ mkSafeCoordinate fibrePlane $ C genx geny

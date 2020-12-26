@@ -5,22 +5,26 @@
 
 packages:
 - completed:
-    cabal-file:
-      size: 2505
-      sha256: 90fa03cd0fa90ae87aaef73f3f4d0ce5261b895287e8856798a0dbc6f526e5d5
+    hackage: base58-bytestring-0.1.0@sha256:a1da72ee89d5450bac1c792d9fcbe95ed7154ab7246f2172b57bd4fd9b5eab79,1913
+    pantry-tree:
+      size: 419
+      sha256: 053784f8edef6433518c873a7c502dc75348f812e2384e1306f90467ea54f40b
+  original:
+    hackage: base58-bytestring-0.1.0
+- completed:
     name: hd-tree-secp256k1
     version: 0.0.0
     git: git@github.com:afg419/hd-tree-secp256k1.git
     pantry-tree:
-      size: 932
-      sha256: 21693fa07e66d59e21bedf9164a9da27c4fd8c3b84cdf613e40ab0dce1818395
-    commit: 17151b2c081c59ce9b68b89419781cd82f3684aa
+      size: 989
+      sha256: f416362df9a912d3cda023aa02934ab91088169f9f2c8780ae0bad3aa8acb206
+    commit: f33b8a7ee51ec481767a5b0808b9cc8489cfb828
   original:
     git: git@github.com:afg419/hd-tree-secp256k1.git
-    commit: 17151b2c081c59ce9b68b89419781cd82f3684aa
+    commit: f33b8a7ee51ec481767a5b0808b9cc8489cfb828
 snapshots:
 - completed:
-    size: 499889
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/26.yaml
-    sha256: ecb02ee16829df8d7219e7d7fe6c310819820bf335b0b9534bce84d3ea896684
-  original: lts-13.26
+    size: 533252
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/26.yaml
+    sha256: cdbc5db9c1afe80a5998247939027a0c7db92fa0f20b5cd01596ec3da628b622
+  original: lts-16.26

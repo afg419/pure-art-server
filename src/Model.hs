@@ -5,7 +5,8 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE QuasiQuotes                #-}
-
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Model where
 
@@ -62,7 +63,7 @@ share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
   |]
 
 
-mkSafePainting :: forall a m n. SCTY a m n -> PaintingRecord -> Maybe (SafeCTY a m n PaintingRecord)
+mkSafePainting :: forall a m n. SContext a m n -> PaintingRecord -> Maybe (ValidForContext a m n PaintingRecord)
 mkSafePainting = mkSafeCTY Equals
 
 getVertexRecordId :: VertexRecord -> VertexRecordId
@@ -88,24 +89,24 @@ instance TwoDimensional PaintingRecord where
   getX = fromIntegral <<< paintingRecordXSize
   getY = fromIntegral <<< paintingRecordYSize
 
-instance CTY PaintingRecord where
+instance HasContext PaintingRecord where
   getAsset = paintingRecordAsset
 
 instance TwoDimensional (Entity PaintingRecord) where
   getX = getX <<< entityVal
   getY = getY <<< entityVal
-instance CTY (Entity PaintingRecord) where
+instance HasContext (Entity PaintingRecord) where
   getAsset = getAsset <<< entityVal
 
-getVertexRecord :: VertexRecordApproximation a m n -> Safe2D m n VertexRecord
+getVertexRecord :: VertexRecordApproximation a m n -> ValidForPlane m n VertexRecord
 getVertexRecord (PerfectRecord v _) = v
 getVertexRecord (ApproximateRecord v _) = v
 getVertexRecord (NoRecord v ) = v
 
 data VertexRecordApproximation (a :: Asset) (m :: Nat) (n :: Nat) where
-  PerfectRecord :: Safe2D m n VertexRecord -> SafeCTY a m n LocaleRecord -> VertexRecordApproximation a m n
-  ApproximateRecord :: Safe2D m n VertexRecord -> SafeCTY a m n LocaleRecord -> VertexRecordApproximation a m n
-  NoRecord :: Safe2D m n VertexRecord -> VertexRecordApproximation a m n
+  PerfectRecord :: ValidForPlane m n VertexRecord -> ValidForContext a m n LocaleRecord -> VertexRecordApproximation a m n
+  ApproximateRecord :: ValidForPlane m n VertexRecord -> ValidForContext a m n LocaleRecord -> VertexRecordApproximation a m n
+  NoRecord :: ValidForPlane m n VertexRecord -> VertexRecordApproximation a m n
 instance Show (VertexRecordApproximation a m n) where
   show = show <<< fromSafe2D <<< getVertexRecord
 

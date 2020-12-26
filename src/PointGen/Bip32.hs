@@ -23,9 +23,7 @@ mkPublicKey :: XPub -> DerivationPath -> Maybe PublicKey
 mkPublicKey xpub dpath = fmap xpubToPub <<$ deriveXPub xpub dpath
 
 mkAddress :: SAsset a -> PublicKey -> Address a
-mkAddress SDOGE pk =
-  (DogeA <<< Crypto.getDogeP2PKHAddress Crypto.MainNet <<< runPubKey)
-  $ pk
+mkAddress SDOGE = DogeA <<< Crypto.getDogeP2PKHAddress Crypto.MainNet <<< runPubKey
 
 hotAddress :: SAsset a -> XPub -> Address a
 hotAddress sa x = deriveAddress sa x hotPath $>> fromJust
@@ -112,7 +110,7 @@ instance PersistFieldSql DerivationPath where
   sqlType _ = SqlString
 
 mkPath :: [Natural] -> DerivationPath
-mkPath is = DerivationPath <<< Crypto.Path <<< fmap (Crypto.Index <<< fromIntegral) $ is
+mkPath = DerivationPath <<< Crypto.Path <<< fmap (Crypto.Index <<< fromIntegral)
 
 unPath :: DerivationPath -> [Natural]
 unPath (DerivationPath (Crypto.Path p)) = fmap (fromIntegral <<< Crypto.getIndex) p

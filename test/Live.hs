@@ -21,16 +21,16 @@ module Live where
 --   time <- getCurrentTime
 --   pure $ Canvas2 xpubT 100 150 DOGE 0 time time
 --
--- coordinates :: [Coordinate2]
+-- coordinates :: [Coordinate]
 -- coordinates = [(0,0), (50, 20), (200, 300)]
 --
--- edgesSafe :: Graph Coordinate2
+-- edgesSafe :: Graph Coordinate
 -- edgesSafe = Graph [Edge (0,0) (50,20), Edge (0,0) (3,4)]
--- edgesUnsafe :: Graph Coordinate2
+-- edgesUnsafe :: Graph Coordinate
 -- edgesUnsafe = Graph [Edge (0,0) (50,20), Edge (0,0) (3,4), Edge (0,0) (200,400)]
 
--- coordinateT :: KnownNats m n => Plane2 m n -> SCoordinate2 m n
--- coordinateT p2 = SCoordinate2 { x = 0, y = 0, plane = p2 }
+-- coordinateT :: KnownNats m n => Plane m n -> SCoordinate m n
+-- coordinateT p2 = SCoordinate { x = 0, y = 0, plane = p2 }
 --
 -- deriveManyAddresses :: SAsset a -> XPub -> Range Integer -> [(DerivationPath, Maybe (Address a))]
 -- deriveManyAddresses s xpub (Range from' to') = fmap (id &&& deriveAddress s xpub) paths
@@ -44,10 +44,10 @@ module Live where
 --   let result = fromIntegral <<< length <<< catMaybes <<< fmap snd $ derivations
 --   pure (result, before)
 --
--- deriveManyLocalesBenchT2 :: (KnownNats m n) => XPub -> Integer -> Plane2 m n -> [SLocale 'DOGE m n]
+-- deriveManyLocalesBenchT2 :: (KnownNats m n) => XPub -> Integer -> Plane m n -> [SLocale 'DOGE m n]
 -- deriveManyLocalesBenchT2 xpub top p2 = catMaybes <<< fmap (deriveLocale SDOGE xpub p2) $ (pathsForIndices [0..top])
 --
--- benchBulkTest :: KnownNats m n => Plane2 m n -> Integer -> IO (Either String GenerateWholeCanvasRes)
+-- benchBulkTest :: KnownNats m n => Plane m n -> Integer -> IO (Either String GenerateWholeCanvasRes)
 -- benchBulkTest p2 totalRecords = handler $ do
 --   runEffects (run @PsqlDB) $ do
 --     sCanvasId <- (fromJust <<< eToM) <$> liftEffectful (insertCanvas2 xpubT p2)

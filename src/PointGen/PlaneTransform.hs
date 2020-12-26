@@ -1,5 +1,4 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module PointGen.PlaneTransform where
 
@@ -9,18 +8,20 @@ import PointGen.Coordinate
 import Data.Maybe
 import Import
 
-projectTo :: forall n1 m1 n2 m2. Plane2 m2 n2 -> SCoordinate2 m1 n1 -> SCoordinate2 m2 n2
-projectTo cNew@P2 c@(SCoordinate2 x' y') =
-  fromJust $ mkCoordinate xScaled yScaled P2
+projectTo :: forall n1 m1 n2 m2. Plane m2 n2 -> SCoordinate m1 n1 -> SCoordinate m2 n2
+projectTo cNew@P2 c =
+  fromJust $ mkSafeCoordinate P2 $ C xScaled yScaled
   where
+    x' = getX c
+    y' = getY c
     (xNew, yNew) = dimensions cNew
-    (xOld, yOld) = dimensions' c
+    (xOld, yOld) = planeDimensions c
     xScaled = (x' * xNew) `div` xOld
     yScaled = (y' * yNew) `div` yOld
 
-fibreOver :: forall m1 n1 m2 n2. Plane2 m1 n1 -> SCoordinate2 m2 n2 -> SubPlane2 m1 n1
-fibreOver plane_up@P2 (SCoordinate2 x' y') =
-  SubPlane2 (SCoordinate2 botX botY) (SCoordinate2 topX topY)
+fibreOver :: forall m1 n1 m2 n2. Plane m1 n1 -> SCoordinate m2 n2 -> SubPlane2 m1 n1
+fibreOver plane_up@P2 (ValidForPlane (C x' y'))=
+  SubPlane2 (ValidForPlane $ C botX botY) (ValidForPlane $ C topX topY)
   where
     plane_down = P2 @m2 @n2
 
@@ -42,15 +43,15 @@ fibreOver plane_up@P2 (SCoordinate2 x' y') =
 
 -- Coordinates represent opposite corners of the plane
 data SubPlane2 (m :: Nat) (n :: Nat)  where
-  SubPlane2 :: SCoordinate2 m n -> SCoordinate2 m n -> SubPlane2 m n
+  SubPlane2 :: SCoordinate m n -> SCoordinate m n -> SubPlane2 m n
 deriving instance (Eq (SubPlane2 m n))
 deriving instance (Show (SubPlane2 m n))
 
 xRange :: SubPlane2 m n -> Range Natural
-xRange (SubPlane2 (SCoordinate2 x1 _) (SCoordinate2 x2 _ )) = mkRange x1 x2
+xRange (SubPlane2 c1 c2) = mkRange (getX c1) (getX c2)
 
 yRange :: SubPlane2 m n -> Range Natural
-yRange (SubPlane2 (SCoordinate2 _ y1) (SCoordinate2 _ y2)) = mkRange y1 y2
+yRange (SubPlane2 (ValidForPlane (C _ y1)) (ValidForPlane (C _ y2))) = mkRange y1 y2
 
 -- subplane length + width
 subplane2Dim :: SubPlane2 m n -> (Natural, Natural)
@@ -60,8 +61,8 @@ subplane2Dim = (diameter <<< xRange) &&& (diameter <<< xRange)
 subplane2Translate :: SubPlane2 m n -> (Natural, Natural)
 subplane2Translate = (low <<< xRange) &&& (low <<< yRange)
 
-inSubPlane :: SCoordinate2 m n -> SubPlane2 m n -> Bool
-inSubPlane c sp = (cx c) `inRange` (xRange sp) && (cy c) `inRange` (yRange sp)
+inSubPlane :: SCoordinate m n -> SubPlane2 m n -> Bool
+inSubPlane c sp = (getX c `inRange` xRange sp) && (getY c `inRange` yRange sp)
 
 scaleToNewSegment :: Natural -> Natural -> Natural -> Natural
 scaleToNewSegment initialCount finalCount initialPoint =

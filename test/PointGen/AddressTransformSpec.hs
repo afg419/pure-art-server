@@ -7,13 +7,13 @@ import PointGen
 import Import hiding (print)
 import Data.Maybe
 
-smallPlane :: Plane2 10 10
+smallPlane :: Plane 10 10
 smallPlane = P2
-mediumPlane :: Plane2 100 100
+mediumPlane :: Plane 100 100
 mediumPlane = P2
-largePlane :: Plane2 1000 1000
+largePlane :: Plane 1000 1000
 largePlane = P2
-xLargePlane :: Plane2 10000 10000
+xLargePlane :: Plane 10000 10000
 xLargePlane = P2
 
 prop_projectTo :: IO ()
@@ -23,15 +23,15 @@ prop_projectTo = quickCheck $ do
       let (x_up_dim, y_up_dim) = dimensions plane_up
       let (x_down_dim, y_down_dim) = dimensions plane_down
 
-      let sw_up = fromJust $ mkCoordinate 0 0 plane_up
-      let nw_up = fromJust $ mkCoordinate 0 (y_up_dim - 1) plane_up
-      let se_up = fromJust $ mkCoordinate (x_up_dim - 1) 0 plane_up
-      let ne_up = fromJust $ mkCoordinate (x_up_dim - 1) (y_up_dim - 1) plane_up
+      let sw_up = fromJust $ mkSafeCoordinate plane_up $ C 0 0
+      let nw_up = fromJust $ mkSafeCoordinate plane_up $ C 0 (y_up_dim - 1)
+      let se_up = fromJust $ mkSafeCoordinate plane_up $ C (x_up_dim - 1) 0
+      let ne_up = fromJust $ mkSafeCoordinate plane_up $ C (x_up_dim - 1) (y_up_dim - 1)
 
-      let sw_down = fromJust $ mkCoordinate 0 0 plane_down
-      let nw_down = fromJust $ mkCoordinate 0 (y_down_dim - 1) plane_down
-      let se_down = fromJust $ mkCoordinate (x_down_dim - 1) 0 plane_down
-      let ne_down = fromJust $ mkCoordinate (x_down_dim - 1) (y_down_dim - 1) plane_down
+      let sw_down = fromJust $ mkSafeCoordinate plane_down $ C 0 0
+      let nw_down = fromJust $ mkSafeCoordinate plane_down $ C 0 (y_down_dim - 1)
+      let se_down = fromJust $ mkSafeCoordinate plane_down $ C (x_down_dim - 1) 0
+      let ne_down = fromJust $ mkSafeCoordinate plane_down $ C (x_down_dim - 1) (y_down_dim - 1)
 
       pure $ ne_down == projectTo plane_down ne_up
         && nw_down == projectTo plane_down nw_up

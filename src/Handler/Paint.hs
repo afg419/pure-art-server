@@ -1,6 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Handler.Paint where
@@ -28,15 +27,15 @@ postSubmitPaintR xpub = do
 
 submitPaintLogic :: Paintings s => XPub -> SubmitPaintReq -> s (Either Text SubmitPaintRes)
 submitPaintLogic xpub req = do
-    withCanvasTy req $ \(scty,_) -> do
-      case mToE "vertices oob" <<< fmap SPainting2 <<$ mkSGraph (dim scty) (submitImage req) of
+    withContext req $ \(scty,_) -> do
+      case mToE "vertices oob" <<< fmap SPainting <<$ mkSGraph (dim scty) (submitImage req) of
         Left e -> pure <<< Left <<$ e
         Right sPainting2 -> do
           sPaintingId <- insertPainting scty xpub sPainting2
           pure <<< Right <<< SubmitPaintRes <<< fromSafeCTY <<$ sPaintingId
 
 data SubmitPaintReq = SubmitPaintReq
-  { submitImage :: Graph Coordinate2
+  { submitImage :: Graph Coordinate
   , submitAsset :: Asset
   , submitXSize :: Natural
   , submitYSize :: Natural
@@ -46,7 +45,7 @@ instance TwoDimensional SubmitPaintReq where
   getX = fromIntegral <<< submitXSize
   getY = fromIntegral <<< submitYSize
 
-instance CTY SubmitPaintReq where
+instance HasContext SubmitPaintReq where
   getAsset = submitAsset
 
 instance FromJSON SubmitPaintReq where
@@ -81,7 +80,7 @@ instance ToJSON SubmitPaintRes where
 --     fmap toJSON <<< ExceptT <<< fmap (mToE "Painting not found") <<$ retrievePainting prid
 --
 -- data SavePaintReq = SavePaintReq
---   { image :: Graph Coordinate2
+--   { image :: Graph Coordinate
 --   , xSize :: Natural
 --   , ySize :: Natural
 --   } deriving Generic
@@ -92,7 +91,7 @@ instance ToJSON SubmitPaintRes where
 --     pkgenId <- ExceptT <<< fmap (mToE "Xpub not found") <<$ getPublicKeyGeneratorId xpub
 --
 --     withPlaneTy (cx, cy) $ \p2 -> do
---       sImage <- ExceptT <<< pure <<< mToE "vertices oob" <<< fmap SPainting2 <<$ mkSGraph p2 image
+--       sImage <- ExceptT <<< pure <<< mToE "vertices oob" <<< fmap SPainting <<$ mkSGraph p2 image
 --       res <- lift <<$ insertPainting pkgenId p2 sImage
 --       pure <<< toJSON <<$ res
 
@@ -109,9 +108,9 @@ instance ToJSON SubmitPaintRes where
 -- instance FromJSON PaintScaffoldReq
 --
 -- data SPaintScaffoldReq a m n = SPaintScaffoldReq
---   (SCTY a m n)
+--   (SContext a m n)
 --   (Entity PublicKeyGenerator)
---   (Graph (SCoordinate2 m n))
+--   (Graph (SCoordinate m n))
 --
 -- data PaintScaffoldRes v where
 --   PaintScaffoldRes :: [TxScaffold (BranchCounter v)] -> PaintScaffoldRes v
@@ -132,25 +131,25 @@ instance ToJSON SubmitPaintRes where
 --     , "path" .= (String $ tshow dp)
 --     ]
 
-mkSGraph :: Plane2 m n
-  -> Graph Coordinate2
-  -> Maybe (Graph (SCoordinate2 m n))
-mkSGraph p2 graph = traverse testVertextOOB graph
+mkSGraph :: Plane m n
+  -> Graph Coordinate
+  -> Maybe (Graph (SCoordinate m n))
+mkSGraph p2 = traverse testVertextOOB
   where
-    testVertextOOB v = mkCoordinate (fst v) (snd v) p2
+    testVertextOOB v = mkSafeCoordinate p2 v
 
 -- scaffoldBestFitPaintLogic :: (CanvasGeneration r, Paintings r) => PaintScaffoldReq -> r (Either Text Value)
 -- scaffoldBestFitPaintLogic (PaintScaffoldReq paintingId ca) = runExceptT $ do
 --
 --     pkgen <- ExceptT <<< fmap (mToE "Xpub not found") <<$ getPublicKeyGenerator xpub
 --
---     withCanvasTy cty $ \scty -> do
+--     withContext cty $ \scty -> do
 --       sImage <- ExceptT <<< pure <<< mToE "vertices oob" <<$ mkSGraph (dim scty) image
 --       res <- ExceptT <<< fmap Right <<$ sScaffoldBestFitPaintLogic (SPaintScaffoldReq scty pkgen sImage)
 --       pure <<< toJSON <<$ res
 --
 --     where
---       cty = CTY ca cx cy
+--       cty = HasContext ca cx cy
 --
 -- sScaffoldBestFitPaintLogic :: (CanvasGeneration r) => SPaintScaffoldReq a m n -> r (PaintScaffoldRes (DpSLocale a m n))
 -- sScaffoldBestFitPaintLogic (SPaintScaffoldReq scty pkgen sImage) = do
