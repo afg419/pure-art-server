@@ -79,7 +79,7 @@ toTxScaffold hotV sts = toTxScaffold' initInput combinedSTree
 
 toTxScaffold' :: Show v => InputScaffold v -> StarTree v -> [TxScaffold v]
 toTxScaffold' _ (StarTree _ []) = []
-toTxScaffold' input' (StarTree v sts) = (thisScaffold:nextScaffolds)
+toTxScaffold' input' (StarTree v sts) = thisScaffold:nextScaffolds
   where
     thisId = mkScaffoldId <<< pack <<< (show v <>) <<< show <<< fmap (show <<< stSrc) <<$ sts
 

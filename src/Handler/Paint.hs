@@ -14,13 +14,15 @@ import Paint
 import Model
 import Data.Aeson
 
+-- Submit this image with given xpub, resolution, asset. CanvasGenerate daemon will pick it up and start creating locales for the
+-- vertices
 postSubmitPaintR :: XPub -> Handler Value
 postSubmitPaintR xpub = do
   app <- getYesod
   eSubmitPaintReq <- parseCheckJsonBody
 
   case eSubmitPaintReq of
-    Error err -> pure $ String $ pack err
+    Error err -> sendResponseStatus status400 err
     Success submitPaintReq -> do
       eRes <-  flip runReaderT app <<< interpret (run @PsqlDB) <<$ submitPaintLogic xpub submitPaintReq
       either (sendResponseStatus status500) (pure <<< toJSON) eRes

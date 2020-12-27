@@ -1,7 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -11,7 +8,6 @@ import Import hiding (elem, filter, map, find, group, sort, sum, sortOn)
 import Data.List hiding (last)
 import Data.Bifoldable
 import Data.Aeson
-import qualified Data.Vector as V
 import qualified Data.HashMap.Strict as HM
 
 data Edge v = Edge { eSrc :: v, eTgt :: v } deriving (Functor, Foldable, Traversable)
@@ -22,13 +18,7 @@ instance Eq v => Eq (Edge v) where -- for now we don't distinguish between sourc
   Edge s1 t1 == Edge s2 t2 = ((s1 == s2) || (s1 == t2)) && ((t1 == s2) || (t1 == t2))
 
 instance FromJSON v => FromJSON (Edge v) where
-  parseJSON = withArray "edge" $ \valueVector -> do
-    if V.length valueVector /= 2
-      then fail "Could not parse as edge, length not 2"
-      else do
-        src <- parseJSON <<$ V.head valueVector
-        tgt <- parseJSON <<$ V.last valueVector
-        pure $ Edge src tgt
+  parseJSON v = uncurry Edge <$> parseJSON v
 
 vertices :: Eq v => [Edge v] -> [v]
 vertices = const True $>> verticesSuchThat
@@ -41,6 +31,7 @@ verticesSuchThat st es = es
 edgeVertices :: Edge v -> (v, v)
 edgeVertices = eSrc &&& eTgt
 
+-- each ray should have src or tgt sSrc
 data Star v = Star { sSrc :: v, rays :: [Edge v] }
 deriving instance Show v => Show (Star v)
 
@@ -57,9 +48,9 @@ rayTgts s = verticesSuchThat (/= v) es
     es = rays s
 
 vertexEdges :: Eq v => [Edge v] -> v -> Star v
-vertexEdges es v = Star v rays
+vertexEdges es v = Star v rays'
   where
-    rays = es $>> mapMaybe (v `inEdgeM`)
+    rays' = es $>> mapMaybe (v `inEdgeM`)
 
 starSize :: Eq v => Star v -> Integer
 starSize = rayTgts >>> length >>> fromIntegral
@@ -72,7 +63,7 @@ inEdgeM v e = if (v `inEdge` e)
   then Just e
   else Nothing
 
-data Graph v  = Graph { edges :: [Edge v] } deriving (Functor, Foldable, Traversable)
+newtype Graph v  = Graph { edges :: [Edge v] } deriving (Functor, Foldable, Traversable)
 instance ToJSON v => ToJSON (Graph v) where
   toJSON (Graph es) = toJSON es
 
@@ -83,8 +74,8 @@ instance Eq v => Monoid (Graph v) where
 
 instance FromJSON v => FromJSON (Graph v) where
   parseJSON = withArray "edge list" $ \edgeVector -> do
-    edges <- traverse parseJSON edgeVector
-    pure <<< Graph <<< toList <<$ edges
+    edges' <- traverse parseJSON edgeVector
+    pure <<< Graph <<< toList <<$ edges'
 
 singletonG :: v -> Graph v
 singletonG v = Graph <<$ [Edge v v]
@@ -101,7 +92,7 @@ vertexInGraph :: Eq v => Graph v ->  v -> Bool
 vertexInGraph g v = v `elem` verticesG g
 
 vertexEdgesG :: Eq v => Graph v -> v -> Star v
-vertexEdgesG g v = vertexEdges (edges g) v
+vertexEdgesG g = vertexEdges (edges g)
 
 connectedComponents :: (Show v, Eq v) => [Graph v] -> Graph v -> [Graph v]
 connectedComponents _ (Graph []) = []
@@ -109,7 +100,7 @@ connectedComponents visitedComponents g =
   case remainingVertices of
     [] -> []
     (next:_) -> let nextComponent = componentFor visitedVertices g next in
-      nextComponent : (connectedComponents (nextComponent : visitedComponents) g)
+      nextComponent : connectedComponents (nextComponent : visitedComponents) g
   where
     visitedVertices = join <<< fmap verticesG <<$ visitedComponents
     remainingVertices = verticesG g \\ visitedVertices
@@ -119,7 +110,7 @@ componentFor _ (Graph []) v = singletonG v
 componentFor visited (Graph es) v = mconcat <<$ toGraph vStar : recurse1
   where
     vStar = vertexEdges es v
-    remainingEdges = es \\ (rays vStar)
+    remainingEdges = es \\ rays vStar
 
     adjacentVertices = rayTgts vStar \\ visited
     visited' = adjacentVertices <> visited
@@ -143,14 +134,14 @@ branches (StarTree _ sts) = sts
 
 data Funds = Funds { fins :: Natural, inps :: Natural, outps :: Natural, txs :: Natural }
 instance Show Funds where
-  show (Funds fins inps outps txs) =
+  show Funds {..} =
     show fins <> "F" <> " + " <>
     show inps <> "I" <> " + " <>
     show outps <> "O" <> " + " <>
     show txs <> "TX"
 
 instance ToJSON Funds where
-  toJSON (Funds fins inps outps txs) = object
+  toJSON Funds {..} = object
     [ "finCount" .= fins
     , "inputCount" .= inps
     , "outputCount" .= outps

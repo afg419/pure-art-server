@@ -20,6 +20,7 @@ module Application
     , db
     ) where
 
+
 import Control.Concurrent                   (forkIO)
 import Control.Monad.Logger                 (liftLoc, runLoggingT)
 import Database.Persist.Postgresql          (createPostgresqlPool, pgConnStr,
