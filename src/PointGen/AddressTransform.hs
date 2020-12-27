@@ -74,7 +74,7 @@ instance ToJSON (SLocale a m n) where
 
 data Locale = forall a m n. Locale (SLocale a m n)
 
-instance TwoDimensional (SLocale a m n) where
+instance CoordinateLike (SLocale a m n) where
   getX = getX <<< lCoordinate
   getY = getY <<< lCoordinate
 

@@ -18,7 +18,7 @@ minOn :: (F.Foldable t, Ord a) => (b -> a) -> t b -> b
 minOn = F.minimumBy <<< comparing
 
 preimage :: Eq b => (a -> b) -> b -> [a] -> [a]
-preimage f b domain = Prelude.filter ((== b) <<< f ) domain
+preimage f b = Prelude.filter ((== b) <<< f)
 
 every :: forall a. (Bounded a, Enum a) => [a]
 every = fmap toEnum [ minInt .. maxInt ]

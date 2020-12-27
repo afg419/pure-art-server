@@ -32,7 +32,7 @@ submitPaintLogic xpub req = do
         Left e -> pure <<< Left <<$ e
         Right sPainting2 -> do
           sPaintingId <- insertPainting scty xpub sPainting2
-          pure <<< Right <<< SubmitPaintRes <<< fromSafeCTY <<$ sPaintingId
+          pure <<< Right <<< SubmitPaintRes <<< unwrapValidContext <<$ sPaintingId
 
 data SubmitPaintReq = SubmitPaintReq
   { submitImage :: Graph Coordinate
@@ -41,12 +41,21 @@ data SubmitPaintReq = SubmitPaintReq
   , submitYSize :: Natural
   } deriving (Generic, Show)
 
-instance TwoDimensional SubmitPaintReq where
-  getX = fromIntegral <<< submitXSize
-  getY = fromIntegral <<< submitYSize
+instance PlaneLike SubmitPaintReq where
+  getXDim = fromIntegral <<< submitXSize
+  getYDim = fromIntegral <<< submitYSize
 
 instance HasContext SubmitPaintReq where
   getAsset = submitAsset
+
+instance CanBeValid SubmitPaintReq where
+  mkSafe c@(SContext a p) req =
+    if assetValid && planeValid
+    then Just $ ValidForContext a (ValidForPlane req)
+    else Nothing
+    where
+      assetValid = getAsset c == submitAsset req
+      planeValid = getXDim p == fromIntegral (submitXSize req) && getYDim p == fromIntegral (submitYSize req)
 
 instance FromJSON SubmitPaintReq where
   parseJSON = withObject "submit painting request" $ \o -> do

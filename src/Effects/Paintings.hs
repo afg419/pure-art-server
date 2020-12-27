@@ -15,7 +15,7 @@ import Data.Maybe (fromJust)
 newtype SPainting (m :: Nat) (n :: Nat) = SPainting (Graph (SCoordinate m n))
 class Effect s => Paintings s where
   insertPainting :: SContext a m n -> XPub -> SPainting m n -> s (ValidForContext a m n PaintingRecordId)
-  retrievePaintingVertices :: Plane m n -> ValidForContext a m n PaintingRecordId -> s [VertexRecordApproximation a m n]
+  retrievePaintingVertices :: SContext a m n -> ValidForContext a m n PaintingRecordId -> s [VertexRecordApproximation a m n]
   retrievePainting :: SContext a m n -> ValidForContext a m n PaintingRecordId -> s (Either Text (ValidForContext a m n PaintingRecord))
   updatePaintingIndex :: PaintingRecordId -> Natural -> s ()
   markPaintingFullyApproximated :: PaintingRecordId -> s ()
@@ -23,10 +23,10 @@ class Effect s => Paintings s where
   replaceVertexLocale :: ValidForPlane m n VertexRecord -> SLocale a m n -> s ()
 
 instance Paintings PsqlDB where
-  insertPainting ctx xpub (SPainting g@(Graph es)) = PsqlDB $ do
+  insertPainting ctx@(SContext sa _) xpub (SPainting g@(Graph es)) = PsqlDB $ do
     now <- liftIO getCurrentTime
 
-    precId <- insert <<$ PaintingRecord (getAsset ctx) (fromIntegral <<< getX $ ctx) (fromIntegral <<< getY $ ctx) xpub 0 False now now
+    precId <- insert <<$ PaintingRecord (getAsset ctx) (fromIntegral <<< getXDim $ ctx) (fromIntegral <<< getYDim $ ctx) xpub 0 False now now
     let paintingVertices = verticesG g
 
     let vertexRecords = fmap (vertexToVertexRecord precId now) paintingVertices
@@ -34,29 +34,29 @@ instance Paintings PsqlDB where
 
     let edgeRecords = fmap (edgeToEdgeRecord precId now) es
     insertMany_ edgeRecords
-    pure <<< toSafeCTY <<$ precId
+    pure <<< flip unsafeMkValid sa <<$ precId
 
-  retrievePaintingVertices p2 sPrecId = PsqlDB $ do
+  retrievePaintingVertices (SContext sa p2) sPrecId = PsqlDB $ do
     vs <- let
-        vertexGets = selectList [ VertexRecordPaintingRecordId ==. fromSafeCTY sPrecId] []
-        mapGetToSafe2D = entityVal >>> mkSafe2D WithinRange p2
+        vertexGets = selectList [ VertexRecordPaintingRecordId ==. unwrapValidContext sPrecId] []
+        mapGetToSafe2D = entityVal >>> mkSafeCoordinate p2
       in vertexGets $>> fmap (mapMaybe mapGetToSafe2D)
       --  $>> fmap (fmap (entityVal >>> mkSafe2D WithinRange p2) $>> mapMaybe)
-    for vs $ \v -> case vertexRecordClosestLocale $ fromSafe2D v of
+    for vs $ \v -> case vertexRecordClosestLocale $ unwrapValid v of
         Nothing -> pure <<$ NoRecord v
         Just localeId -> do
-          locale <- fmap (toSafeCTY <<< fromJust) <<$ get localeId -- TODO :: replace with primary keys
+          locale <- fmap (flip unsafeMkValid sa <<< fromJust) <<$ get localeId -- TODO :: replace with primary keys
           if l1Dist v locale == 0
             then pure <<$ PerfectRecord v locale
             else pure <<$ ApproximateRecord v locale
 
   retrievePainting ctx sPrecId = PsqlDB $ do
-    mPainting <- get (fromSafeCTY sPrecId)
+    mPainting <- get (unwrapValidContext sPrecId)
     case mPainting of
       Nothing -> Left "Painting not found" $>> pure
-      Just p -> mkSafePainting ctx p $>> mToE "Painting cty does not match" >>> pure
+      Just painting -> mkSafe ctx painting $>> mToE "Painting cty does not match" >>> pure
 
-  updatePaintingIndex precId nextIndex = [PaintingRecordNextPathIndex =. (fromIntegral nextIndex)]
+  updatePaintingIndex precId nextIndex = [PaintingRecordNextPathIndex =. fromIntegral nextIndex]
     $>> update precId
     >>> PsqlDB
 
@@ -65,7 +65,7 @@ instance Paintings PsqlDB where
     >>> PsqlDB
 
   replaceVertexLocale v sLocale = PsqlDB $ do
-    let vertex = fromSafe2D v
+    let vertex = unwrapValid v
     now <- liftIO getCurrentTime
     let prid = vertexRecordPaintingRecordId vertex
     let localeRecord = localeToLocaleRecord prid now sLocale
@@ -83,20 +83,19 @@ localeToLocaleRecord prid t sl@SLocale{..} = LocaleRecord prid lPath (tshow lAdd
     lry = fromIntegral <<< getY <<$ sl
 
 vertexToVertexRecord :: PaintingRecordId -> UTCTime -> SCoordinate m n -> VertexRecord
-vertexToVertexRecord prid t (SCoordinate{..}) = VertexRecord prid (fromIntegral cx) (fromIntegral cy) Nothing t
+vertexToVertexRecord prid t s = VertexRecord prid (fromIntegral $ getX s) (fromIntegral $ getY s) Nothing t
 
 edgeToEdgeRecord :: PaintingRecordId -> UTCTime -> Edge (SCoordinate m n) -> EdgeRecord
 edgeToEdgeRecord prid t (Edge from' to') = EdgeRecord prid fromX fromY toX toY t
   where
-    fromX = fromIntegral <<$ cx from'
-    fromY = fromIntegral <<$ cy from'
+    fromX = fromIntegral <<$ getX from'
+    fromY = fromIntegral <<$ getY from'
 
-    toX = fromIntegral <<$ cx to'
-    toY = fromIntegral <<$ cy to'
-
+    toX = fromIntegral <<$ getX to'
+    toY = fromIntegral <<$ getY to'
 
 edgeRecordToEdge :: EdgeRecord -> Edge Coordinate
 edgeRecordToEdge (EdgeRecord _ fromX fromY toX toY _) =
   Edge
-  (fromIntegral fromX, fromIntegral fromY)
-  (fromIntegral toX, fromIntegral toY)
+    (C (fromIntegral fromX) (fromIntegral fromY))
+    (C (fromIntegral toX) (fromIntegral toY))

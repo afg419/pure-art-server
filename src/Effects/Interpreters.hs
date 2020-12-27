@@ -3,7 +3,7 @@
 module Effects.Interpreters where
 
 import Foundation
-import Import hiding (fail)
+import Import
 import Effects.Common
 import Database.Persist.Sql
 

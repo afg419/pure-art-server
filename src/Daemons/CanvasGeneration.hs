@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Daemons.CanvasGeneration where
@@ -6,7 +5,6 @@ module Daemons.CanvasGeneration where
 import PointGen
 import Model
 import Effects.Paintings
-import Control.Monad.Trans.Except
 import Import hiding (undefined, sum, filter, elem, print)
 import Foundation
 import UnliftIO.Concurrent (threadDelay)
@@ -29,11 +27,11 @@ data GenerateLocalesRes =
   LocalesComplete | LocalesImperfect { total :: Natural, imperfect :: Natural, missing :: Natural } --total imerfect missing
 
 approximationReport :: [VertexRecordApproximation a m n] -> GenerateLocalesRes
-approximationReport vs = if perfectCount == total
+approximationReport vs = if perfectCount == total'
   then LocalesComplete
-  else LocalesImperfect total approxCount noCount
+  else LocalesImperfect total' approxCount noCount
   where
-    total = fromIntegral <<$ length vs
+    total' = fromIntegral <<$ length vs
 
     (perfects, imperfects) = partition ((== Perfect) <<< getApproximationQuality) vs
     (nones, approxs) = partition ((== None) <<< getApproximationQuality) imperfects
@@ -49,9 +47,9 @@ approximateVerticesWithLocales ::
   -> Natural
   -> r GenerateLocalesRes
 approximateVerticesWithLocales scty sPrec totalTries = do
-  let painting = fromSafeCTY <<$ fmap entityVal sPrec
+  let painting = unwrapValidContext <<$ fmap entityVal sPrec
   let sPrid = fmap entityKey sPrec
-  vertices <- retrievePaintingVertices (dim scty) sPrid
+  vertices <- retrievePaintingVertices scty sPrid
 
   let nextTry = fromIntegral (paintingRecordNextPathIndex painting)
   let tries = [nextTry .. nextTry + totalTries - 1]
@@ -62,14 +60,14 @@ approximateVerticesWithLocales scty sPrec totalTries = do
 
   _ <- for vertices <<$ replaceVertexLocaleIfBetterApproximation locales
 
-  updatePaintingIndex (fromSafeCTY sPrid) (nextTry + totalTries)
+  updatePaintingIndex (unwrapValidContext sPrid) (nextTry + totalTries)
 
-  updatedVertices <- retrievePaintingVertices (dim scty) sPrid
+  updatedVertices <- retrievePaintingVertices scty sPrid
 
   let res = approximationReport updatedVertices
   case res of
     LocalesComplete -> do
-      markPaintingFullyApproximated <<$ fromSafeCTY sPrid
+      markPaintingFullyApproximated <<$ unwrapValidContext sPrid
       pure res
     _ -> pure res
 
@@ -92,7 +90,7 @@ estimateAttemptsNeededForEntireCanvas p = mkRange (diceSides * lowBoundSum) (dic
     (m,n) = dimensions p
     diceSides = realToFrac $ m * n
     lowBoundSum = log (diceSides + 1)
-    highBoundSum = 1 + log(diceSides)
+    highBoundSum = 1 + log diceSides
 --
 
 estimateAttemptsNeeded2 :: Plane m n -> Double

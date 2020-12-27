@@ -15,7 +15,7 @@ projectTo cNew@P2 c =
     x' = getX c
     y' = getY c
     (xNew, yNew) = dimensions cNew
-    (xOld, yOld) = planeDimensions c
+    (xOld, yOld) = (getXDim &&& getYDim) c
     xScaled = (x' * xNew) `div` xOld
     yScaled = (y' * yNew) `div` yOld
 

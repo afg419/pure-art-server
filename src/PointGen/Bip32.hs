@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 module PointGen.Bip32 where
 
@@ -92,7 +91,7 @@ instance Ord DerivationPath where
   p1 <= p2 = unPath p1 <= unPath p2
 
 instance Read DerivationPath where
-  readsPrec _ ('m':'/':s) = debug "uh is this right?" (fmap (mkPath *** id) ((readsPrec 0 s) :: [([Natural], String)]))
+  readsPrec _ ('m':'/':s) = debug "uh is this right?" (fmap (first mkPath) (reads s :: [([Natural], String)]))
   readsPrec _ _ = []
 
 instance Show DerivationPath where
