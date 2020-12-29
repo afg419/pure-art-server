@@ -44,6 +44,7 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
 import Handler.Paint
+import Handler.WS
 import Model
 import Daemons.CanvasGeneration
 
@@ -51,9 +52,6 @@ import Daemons.CanvasGeneration
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
 -- comments there for more details.
 mkYesodDispatch "App" resourcesApp
-
-getHelloR :: Handler Text
-getHelloR = pure "fuck you"
 
 -- | This function allocates resources (such as a database connection pool),
 -- performs initialization and returns a foundation datatype value. This is also
@@ -164,7 +162,7 @@ appMain = do
     print $ getPort $ warpSettings foundation
 
     -- Try to complete all paintings
-    _ <- forkIO $ approximateVerticesLoop foundation
+    -- _ <- forkIO $ approximateVerticesLoop foundation
 
 
 
