@@ -23,34 +23,37 @@ approximateVertices = forever $ do
     case eitherDecode d of
       Left e -> sendJSONData $ WsExceptionOut ("Could not parse: " <> tshow e) 400
       Right (WsMessage {..} :: WsMessage WsApproximationIn) -> do
+        doTheThing True <<< approximations <<$ msgContent
 
-        sendJSONData $ WsApproximationOut (mkPath [0,0]) 0
-      _ -> sendJSONData $ WsExceptionOut "Unsupported message" 400
-    -- sendTextData ("Welcome to the chat server, please enter your name." :: Text)
-    -- name <- receiveData
-    -- sendTextData $ "Welcome, " <> name
-    -- App writeChan <- getYesod
-    -- readChan <- atomically $ do
-    --     writeTChan writeChan $ name <> " has joined the chat"
-    --     dupTChan writeChan
-    -- race_
-    --     (forever $ atomically (readTChan readChan) >>= sendTextData)
-    --     (sourceWS $$ mapM_C (\msg ->
-    --         atomically $ writeTChan writeChan $ name <> ": " <> msg))
+counters :: [Natural]
+counters = 0 : fmap (+1) counters
 
+approximations :: WsApproximationIn -> [WsApproximationOut]
+approximations wsin = mapMaybe (withContext wsin vertexApproximationFor) counters
 
-approximateVertex :: WsApproximationIn -> Natural -> IO ()
-approximateVertex wsin counter = do
-  withContext wsin (vertexApproximationFor counter)
+doTheThing :: (MonadIO m, MonadReader Connection m) => Bool -> [WsApproximationOut] -> m ()
+doTheThing _ [] = pure ()
+doTheThing _ [_] = pure ()
+doTheThing firstTime (a:b:cs) = do
+  when firstTime $ sendJSONData a
+  when (da > db) $ sendJSONData b
 
+  if da == 0 || db == 0
+    then finish
+    else if da > db
+      then do
+        doTheThing False (b:cs)
+      else doTheThing False (a:cs)
+  where
+    finish = pure ()
+    da = debug "a" $ approxOutDistanceFromTarget a
+    db = debug "b" $ approxOutDistanceFromTarget b
 
-
-vertexApproximationFor :: Natural -> (SContext a m n, ValidForContext a m n WsApproximationIn) -> Maybe WsApproximationOut
-vertexApproximationFor counter (sctx, wsin) = do
+vertexApproximationFor :: (SContext a m n, ValidForContext a m n WsApproximationIn) -> Natural -> Maybe WsApproximationOut
+vertexApproximationFor (sctx, wsin) counter = do
   let path = mkPath [0, counter]
   locale <- deriveLocale sctx xpub path
-  let approxOutDistanceFromTarget = l1Dist wsin locale
-  pure $ WsApproximationOut path approxOutDistanceFromTarget
+  pure $ WsApproximationOut path $ l1Dist wsin locale
   where
     xpub = approxInXpub $ unwrapValidContext wsin
 
@@ -83,7 +86,7 @@ data WsApproximationIn = WsApproximationIn
   , approxInDimensions :: (Natural, Natural)
   , approxInXpub :: XPub
   , approxInAsset :: Asset
-  }
+  } deriving (Eq, Show)
 
 instance FromJSON WsApproximationIn where
   parseJSON = withObject "approx in" $ \o -> do
@@ -116,7 +119,7 @@ instance CanBeValid WsApproximationIn where
 data WsApproximationOut = WsApproximationOut
   { approxOutPath :: DerivationPath 
   , approxOutDistanceFromTarget :: Natural
-  }
+  } deriving (Eq, Show)
 
 instance ToJSON WsApproximationOut where
   toJSON WsApproximationOut {..} = object 

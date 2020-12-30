@@ -23,6 +23,11 @@ class Effect s => Paintings s where
   replaceVertexLocale :: ValidForPlane m n VertexRecord -> SLocale a m n -> s ()
 
 instance Paintings PsqlDB where
+  -- insertGenerator ctx xpub = PsqlDB $ do
+  --   now <- liftIO getCurrentTime
+  --   insert_ <<$ PaintingRecord (getAsset ctx) (fromIntegral <<< getXDim $ ctx) (fromIntegral <<< getYDim $ ctx) xpub 0 False now now
+  -- retrieveGenerator ctx cpub = PsqlDB $ do  
+
   insertPainting ctx@(SContext sa _) xpub (SPainting g@(Graph es)) = PsqlDB $ do
     now <- liftIO getCurrentTime
 

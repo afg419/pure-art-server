@@ -25,6 +25,17 @@ import Data.Maybe (fromJust)
 --------------------------------------------------------------------------------
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
+  -- Generator
+  --   asset Asset
+  --   xSize Word64
+  --   ySize Word64
+  --   xPub XPub -- extract to account
+  --   nextPathIndex Word64
+  --   fullyApproximated Bool
+  --   createdAt UTCTime
+  --   updatedAt UTCTime
+  --   deriving Show
+
   PaintingRecord
     asset Asset
     xSize Word64
@@ -81,7 +92,8 @@ withContext c f = case (someAsset a, someNatVal i, someNatVal j) of
     j = getYDim c
 
 data ValidForContext (a :: Asset) (m :: Nat) (n :: Nat) (s :: *) = ValidForContext (SAsset a) (ValidForPlane m n s) deriving (Functor)
-
+instance (Show s) => Show (ValidForContext a m n s) where
+  show = show <<< unwrapValidContext
 instance CoordinateLike s => CoordinateLike (ValidForContext a m n s) where
   getX = getX <<< unwrapValidContext
   getY = getY <<< unwrapValidContext
