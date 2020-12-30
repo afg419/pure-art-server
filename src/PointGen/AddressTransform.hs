@@ -81,8 +81,6 @@ instance CoordinateLike (SLocale a m n) where
 deriveLocale :: SContext a m n -> XPub -> DerivationPath -> Maybe (SLocale a m n)
 deriveLocale cty xpub dpath = scaleLocale (dim cty) <$> deriveFibreLocale (sAsset cty) xpub dpath
 
-deriveSimple :: HasContext c => c -> XPub -> DerivationPath 
-
 type FibreLocale a = SLocale a MaxHashSize MaxHashSize
 
 deriveFibreLocale :: SAsset a -> XPub -> DerivationPath -> Maybe (FibreLocale a)

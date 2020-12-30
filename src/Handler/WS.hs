@@ -10,6 +10,7 @@ import PointGen
 import Data.Aeson
 import Yesod.WebSockets
 import Network.WebSockets (Connection)
+import Model
 
 getHelloR :: Handler ()
 getHelloR = do
@@ -38,13 +39,20 @@ approximateVertices = forever $ do
     --         atomically $ writeTChan writeChan $ name <> ": " <> msg))
 
 
-approximateVertex :: WsApproximationIn -> IO ()
+approximateVertex :: WsApproximationIn -> Natural -> IO ()
 approximateVertex wsin counter = do
-  let counter = 0
-  withContext wsin $ (sctx, swsin) -> 
+  withContext wsin (vertexApproximationFor counter)
 
--- getVertexApproximationFor :: Monad m => SContext a m n -> Natural -> m WsApproximationOut
--- getVertexApproximationFor WsApproximationIn {..} counter = 
+
+
+vertexApproximationFor :: Natural -> (SContext a m n, ValidForContext a m n WsApproximationIn) -> Maybe WsApproximationOut
+vertexApproximationFor counter (sctx, wsin) = do
+  let path = mkPath [0, counter]
+  locale <- deriveLocale sctx xpub path
+  let approxOutDistanceFromTarget = l1Dist wsin locale
+  pure $ WsApproximationOut path approxOutDistanceFromTarget
+  where
+    xpub = approxInXpub $ unwrapValidContext wsin
 
 sendJSONData :: (MonadIO m, ToJSON a, MonadReader Connection m) => a -> m ()
 sendJSONData = sendTextData <<< encode
@@ -86,8 +94,11 @@ instance FromJSON WsApproximationIn where
     pure $ WsApproximationIn {..}
 
 instance PlaneLike WsApproximationIn where
-  getXDim WsApproximationIn{..} = fst dimensions
-  getYDim WsApproximationIn{..} = snd dimensions
+  getXDim WsApproximationIn{..} = fst approxInDimensions
+  getYDim WsApproximationIn{..} = snd approxInDimensions
+instance CoordinateLike WsApproximationIn where
+  getX WsApproximationIn{..} = getX approxInVertex
+  getY WsApproximationIn{..} = getY approxInVertex
 instance HasContext WsApproximationIn where
   getAsset WsApproximationIn{..} = approxInAsset
 
