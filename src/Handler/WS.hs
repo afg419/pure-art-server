@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE FlexibleInstances #-}
+-- {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Handler.WS where
@@ -11,19 +12,27 @@ import Data.Aeson
 import Yesod.WebSockets
 import Network.WebSockets (Connection)
 import Model
+import Handler.WSTypes
 
 getHelloR :: Handler ()
 getHelloR = do
-    webSockets approximateVertices
+    webSockets handleWs
 
-approximateVertices :: WebSocketsT Handler ()
-approximateVertices = forever $ do
+handleWs :: WebSocketsT Handler ()
+handleWs = forever $ do
     d <- receiveData
     _ <- liftIO <<$ print d
     case eitherDecode d of
-      Left e -> sendJSONData $ WsExceptionOut ("Could not parse: " <> tshow e) 400
-      Right (WsMessage {..} :: WsMessage WsApproximationIn) -> do
-        doTheThing True <<< approximations <<$ msgContent
+      Left e -> sendJSONData $ WsException ("Could not parse: " <> tshow e) 400 Nothing Nothing
+      Right w -> handleWsMessage w
+
+handleWsMessage :: WsMessage -> WebSocketsT Handler ()
+handleWsMessage w = do
+  case msgAction w of
+    Approximate -> case extractApproximationIn w of
+      Error e -> sendJSONData $ exceptionResponse w 400 (pack e)
+      Success wsin -> doTheThing True w <<< approximations <<$ wsin
+    Cancel -> sendJSONData $ exceptionResponse w 400 "Cancellation not yet supported :("
 
 counters :: [Natural]
 counters = 0 : fmap (+1) counters
@@ -31,108 +40,33 @@ counters = 0 : fmap (+1) counters
 approximations :: WsApproximationIn -> [WsApproximationOut]
 approximations wsin = mapMaybe (withContext wsin vertexApproximationFor) counters
 
-doTheThing :: (MonadIO m, MonadReader Connection m) => Bool -> [WsApproximationOut] -> m ()
-doTheThing _ [] = pure ()
-doTheThing _ [_] = pure ()
-doTheThing firstTime (a:b:cs) = do
-  when firstTime $ sendJSONData a
-  when (da > db) $ sendJSONData b
+doTheThing :: (MonadIO m, MonadReader Connection m) => Bool -> WsMessage -> [WsApproximationOut] -> m ()
+doTheThing _ _ [] = pure ()
+doTheThing _ _ [_] = pure ()
+doTheThing firstTime wsin (a:b:cs) = do
+  when firstTime $ sendJSONData respondA
+  when (distanceA > distanceB) $ sendJSONData respondB
 
-  if da == 0 || db == 0
+  if distanceA == 0 || distanceB == 0
     then finish
-    else if da > db
+    else if distanceA > distanceB
       then do
-        doTheThing False (b:cs)
-      else doTheThing False (a:cs)
+        doTheThing False wsin (b:cs)
+      else doTheThing False wsin (a:cs)
   where
     finish = pure ()
-    da = debug "a" $ approxOutDistanceFromTarget a
-    db = debug "b" $ approxOutDistanceFromTarget b
+    respondA = swapContent wsin a
+    respondB = swapContent wsin b
+    distanceA = debug "a" $ approxOutDistanceFromTarget a
+    distanceB = debug "b" $ approxOutDistanceFromTarget b
 
 vertexApproximationFor :: (SContext a m n, ValidForContext a m n WsApproximationIn) -> Natural -> Maybe WsApproximationOut
 vertexApproximationFor (sctx, wsin) counter = do
-  let path = mkPath [0, counter]
-  locale <- deriveLocale sctx xpub path
-  pure $ WsApproximationOut path $ l1Dist wsin locale
+  let p = mkPath [0, counter]
+  locale <- deriveLocale sctx xpub p
+  pure $ WsApproximationOut p $ l1Dist wsin locale
   where
     xpub = approxInXpub $ unwrapValidContext wsin
 
 sendJSONData :: (MonadIO m, ToJSON a, MonadReader Connection m) => a -> m ()
 sendJSONData = sendTextData <<< encode
-
-data WsMessage t = WsMessage
-  { msgTopicId :: Text
-  , msgContent :: t
-  , msgVersion :: Natural
-  }
-
-instance ToJSON t => ToJSON (WsMessage t) where
-  toJSON WsMessage {..} = object
-    [ "topicId" .= msgTopicId
-    , "content" .= msgContent
-    , "version" .= msgVersion
-    ]
-
-instance FromJSON t => FromJSON (WsMessage t) where
-  parseJSON = withObject "ws message" $ \o -> do
-    msgTopicId <- o .: "topicId"
-    msgContent <- o .: "content"
-    msgVersion <- o .: "version"
-    pure $ WsMessage {..}
-
--- inbound
-data WsApproximationIn = WsApproximationIn
-  { approxInVertex :: Coordinate
-  , approxInDimensions :: (Natural, Natural)
-  , approxInXpub :: XPub
-  , approxInAsset :: Asset
-  } deriving (Eq, Show)
-
-instance FromJSON WsApproximationIn where
-  parseJSON = withObject "approx in" $ \o -> do
-    approxInVertex <- o .: "vertex"
-    approxInDimensions <- o .: "dimensions"
-    approxInXpub <- o .: "xpub"
-    approxInAsset <- o .: "asset"
-    pure $ WsApproximationIn {..}
-
-instance PlaneLike WsApproximationIn where
-  getXDim WsApproximationIn{..} = fst approxInDimensions
-  getYDim WsApproximationIn{..} = snd approxInDimensions
-instance CoordinateLike WsApproximationIn where
-  getX WsApproximationIn{..} = getX approxInVertex
-  getY WsApproximationIn{..} = getY approxInVertex
-instance HasContext WsApproximationIn where
-  getAsset WsApproximationIn{..} = approxInAsset
-
-instance CanBeValid WsApproximationIn where
-  mkSafe c@(SContext a p) w@WsApproximationIn {..} =
-    if assetValid && planeValid
-    then Just $ ValidForContext a (ValidForPlane w)
-    else Nothing
-    where
-      assetValid = getAsset c == getAsset w
-      planeValid = getXDim p == getXDim w && getYDim p == getYDim w
-
--- outbound
-
-data WsApproximationOut = WsApproximationOut
-  { approxOutPath :: DerivationPath 
-  , approxOutDistanceFromTarget :: Natural
-  } deriving (Eq, Show)
-
-instance ToJSON WsApproximationOut where
-  toJSON WsApproximationOut {..} = object 
-    [ "path" .= approxOutPath
-    , "distanceFromTarget" .= approxOutDistanceFromTarget
-    ]
-data WsExceptionOut = WsExceptionOut
-  { exceptionMessage :: Text
-  , exceptionCode :: Natural
-  }
-
-instance ToJSON WsExceptionOut where
-  toJSON WsExceptionOut {..} = object 
-    [ "message" .= exceptionMessage
-    , "code" .= exceptionCode
-    ]
