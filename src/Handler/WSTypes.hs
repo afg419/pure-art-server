@@ -12,12 +12,13 @@ import Import hiding (undefined, natVal, print)
 import PointGen
 import Data.Aeson
 import Model
-data MessageAction = Approximate | Cancel
+data MessageAction = Approximate | Cancel | Exception
   deriving (Show, Eq)
 
 instance ToJSON MessageAction where
   toJSON Approximate = String "approximate"
   toJSON Cancel = String "cancel"
+  toJSON Exception = String "exception"
 instance FromJSON MessageAction where
   parseJSON = withText "ws action" $ \case
     "approximate" -> pure Approximate
@@ -47,7 +48,7 @@ instance ToJSON WsMessage where
 instance FromJSON WsMessage where
   parseJSON = withObject "ws message" $ \o -> do
     msgTopicId <- o .: "topicId"
-    msgId      <- o .: "id"
+    msgId      <- o .: "msgId"
     msgContent <- o .: "content"
     msgVersion <- o .: "version"
     msgAction  <- o .: "action"
@@ -99,27 +100,29 @@ data WsApproximationOut = WsApproximationOut
 
 instance ToJSON WsApproximationOut where
   toJSON WsApproximationOut {..} = object
-    [ "path" .= approxOutPath
+    [ "derivationPath" .= approxOutPath
     , "distanceFromTarget" .= approxOutDistanceFromTarget
     ]
 
-exceptionResponse :: WsMessage -> Natural -> Text -> WsException
-exceptionResponse WsMessage{..} excCode excMessage = let
-    excId = Just msgId
-    excTopicId = Just msgTopicId
-  in WsException {..}
+rawExceptionResponse :: Natural -> Text -> WsMessage
+rawExceptionResponse excCode excMessage = let
+    msgContent = toJSON WsExceptionOut{..}
+    msgTopicId = ""
+    msgId = ""
+    msgAction = Exception
+    msgVersion = 0
+  in WsMessage {..}
 
-data WsException = WsException
+exceptionResponse :: WsMessage -> Natural -> Text -> WsMessage
+exceptionResponse w excCode excMessage =
+  w { msgAction = Exception, msgContent = toJSON WsExceptionOut{..} }
+data WsExceptionOut = WsExceptionOut
   { excMessage :: Text
   , excCode :: Natural
-  , excId :: Maybe Text
-  , excTopicId :: Maybe Text
   }
 
-instance ToJSON WsException where
-  toJSON WsException {..} = object 
+instance ToJSON WsExceptionOut where
+  toJSON WsExceptionOut {..} = object
     [ "message" .= excMessage
     , "code" .= excCode
-    , "id" .= excId
-    , "topicId" .= excTopicId
     ]

@@ -23,16 +23,17 @@ handleWs = forever $ do
     d <- receiveData
     _ <- liftIO <<$ print d
     case eitherDecode d of
-      Left e -> sendJSONData $ WsException ("Could not parse: " <> tshow e) 400 Nothing Nothing
+      Left e -> sendJSONData $ rawExceptionResponse 400 ("Could not parse: " <> tshow e)
       Right w -> handleWsMessage w
 
 handleWsMessage :: WsMessage -> WebSocketsT Handler ()
 handleWsMessage w = do
-  case msgAction w of
+  case msgAction $ debug "handling..." w of
     Approximate -> case extractApproximationIn w of
       Error e -> sendJSONData $ exceptionResponse w 400 (pack e)
       Success wsin -> doTheThing True w <<< approximations <<$ wsin
     Cancel -> sendJSONData $ exceptionResponse w 400 "Cancellation not yet supported :("
+    _ -> sendJSONData $ exceptionResponse w 400 "Unsupported message action"
 
 counters :: [Natural]
 counters = 0 : fmap (+1) counters
@@ -69,4 +70,4 @@ vertexApproximationFor (sctx, wsin) counter = do
     xpub = approxInXpub $ unwrapValidContext wsin
 
 sendJSONData :: (MonadIO m, ToJSON a, MonadReader Connection m) => a -> m ()
-sendJSONData = sendTextData <<< encode
+sendJSONData = sendTextData <<< debug "response!" <<< encode
