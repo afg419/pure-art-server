@@ -45,7 +45,7 @@ instance CoordinateLike s => CoordinateLike (ValidForPlane m n s) where
 
 -- l1 distance between two dimensional coordinates
 l1Dist :: (CoordinateLike c, CoordinateLike d) => c -> d -> Natural
-l1Dist c d = fromIntegral <<$ (debug "first" $ abs (getXInt c - getXInt d)) + (debug "second" $ abs (getYInt c - getYInt d))
+l1Dist c d = fromIntegral <<$ abs (getXInt c - getXInt d) + abs (getYInt c - getYInt d)
   where
     getXInt :: CoordinateLike e => e -> Integer
     getXInt  = toInteger <<< getX

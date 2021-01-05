@@ -13,6 +13,7 @@ import Yesod.WebSockets
 import Network.WebSockets (Connection)
 import Model
 import Handler.WSTypes
+import UnliftIO.Concurrent
 
 getHelloR :: Handler ()
 getHelloR = do
@@ -31,7 +32,9 @@ handleWsMessage w = do
   case msgAction $ debug "handling..." w of
     Approximate -> case extractApproximationIn w of
       Error e -> sendJSONData $ exceptionResponse w 400 (pack e)
-      Success wsin -> doTheThing True w <<< approximations <<$ wsin
+      Success wsin -> do
+        _ <- forkIO (doTheThing True w <<< approximations <<$ wsin)
+        pure ()
     Cancel -> sendJSONData $ exceptionResponse w 400 "Cancellation not yet supported :("
     _ -> sendJSONData $ exceptionResponse w 400 "Unsupported message action"
 
@@ -58,14 +61,14 @@ doTheThing firstTime wsin (a:b:cs) = do
     finish = pure ()
     respondA = swapContent wsin a
     respondB = swapContent wsin b
-    distanceA = debug "a" $ approxOutDistanceFromTarget a
-    distanceB = debug "b" $ approxOutDistanceFromTarget b
+    distanceA = approxOutDistanceFromTarget a
+    distanceB = approxOutDistanceFromTarget b
 
 vertexApproximationFor :: (SContext a m n, ValidForContext a m n WsApproximationIn) -> Natural -> Maybe WsApproximationOut
 vertexApproximationFor (sctx, wsin) counter = do
   let p = mkPath [0, counter]
   locale <- deriveLocale sctx xpub p
-  pure $ WsApproximationOut p $ l1Dist wsin locale
+  pure $ WsApproximationOut p $ debug "running..." $ l1Dist wsin locale
   where
     xpub = approxInXpub $ unwrapValidContext wsin
 
